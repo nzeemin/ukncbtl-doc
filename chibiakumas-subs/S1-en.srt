@@ -1,0 +1,2520 @@
+1
+00:00:00,080 --> 00:00:01,920
+hello it's keith here and this is lesson
+
+2
+00:00:01,920 --> 00:00:04,799
+one of the simple series of my pdp 11
+
+3
+00:00:04,799 --> 00:00:06,879
+assembly programming tutorials we're
+
+4
+00:00:06,879 --> 00:00:08,559
+looking at a simple example today and
+
+5
+00:00:08,559 --> 00:00:10,080
+we're going to go over pretty much all
+
+6
+00:00:10,080 --> 00:00:11,920
+of the source code because a lot of the
+
+7
+00:00:11,920 --> 00:00:13,200
+previous examples i've been doing
+
+8
+00:00:13,200 --> 00:00:16,160
+recently on the pdp-11 uknc is uh we've
+
+9
+00:00:16,160 --> 00:00:17,920
+not really covered the entire code and
+
+10
+00:00:17,920 --> 00:00:19,520
+i've said i'll go back to this example
+
+11
+00:00:19,520 --> 00:00:21,199
+and i've covered that before we're going
+
+12
+00:00:21,199 --> 00:00:23,840
+to go over all of the code give or take
+
+13
+00:00:23,840 --> 00:00:25,519
+today and discuss each of the sections
+
+14
+00:00:25,519 --> 00:00:26,880
+that have been required to make today's
+
+15
+00:00:26,880 --> 00:00:29,599
+example and today's example is a smiley
+
+16
+00:00:29,599 --> 00:00:31,439
+face moving around the screen of the uk
+
+17
+00:00:31,439 --> 00:00:32,800
+and see you can see we've got this
+
+18
+00:00:32,800 --> 00:00:34,960
+little smiley here we can move it around
+
+19
+00:00:34,960 --> 00:00:36,719
+the screen and it cannot go off the
+
+20
+00:00:36,719 --> 00:00:38,320
+screen so we've got some range checking
+
+21
+00:00:38,320 --> 00:00:39,680
+keyboard reading and we've got our
+
+22
+00:00:39,680 --> 00:00:42,719
+screen setup now the example today we're
+
+23
+00:00:42,719 --> 00:00:46,000
+using the um sub cpu to do the keyboard
+
+24
+00:00:46,000 --> 00:00:47,600
+reading but we've actually remapped the
+
+25
+00:00:47,600 --> 00:00:49,920
+video memory to the main cpu so that the
+
+26
+00:00:49,920 --> 00:00:51,600
+final code can actually all run from the
+
+27
+00:00:51,600 --> 00:00:54,320
+main cpu the problem with this is is it
+
+28
+00:00:54,320 --> 00:00:55,680
+means there's quite a few stages of
+
+29
+00:00:55,680 --> 00:00:57,280
+setup we have to reset the screen memory
+
+30
+00:00:57,280 --> 00:00:59,840
+up and we have to set up the keyboard
+
+31
+00:00:59,840 --> 00:01:01,520
+reader on the interrupt handler and so
+
+32
+00:01:01,520 --> 00:01:03,760
+we're going to see how all of that works
+
+33
+00:01:03,760 --> 00:01:04,879
+today
+
+34
+00:01:04,879 --> 00:01:06,320
+if you want to know how to create the
+
+35
+00:01:06,320 --> 00:01:08,799
+bitmap graphic the smiley was edited in
+
+36
+00:01:08,799 --> 00:01:10,479
+accurate spot edit in my free sprite
+
+37
+00:01:10,479 --> 00:01:13,680
+editor and if we go to pdb11 uknc we
+
+38
+00:01:13,680 --> 00:01:15,840
+have saved with the two-bit plane option
+
+39
+00:01:15,840 --> 00:01:18,320
+today this one here that is the version
+
+40
+00:01:18,320 --> 00:01:20,240
+we're using because the graphic is
+
+41
+00:01:20,240 --> 00:01:22,080
+effectively on the final screen of four
+
+42
+00:01:22,080 --> 00:01:25,600
+color graphic as i say the main cpu that
+
+43
+00:01:25,600 --> 00:01:27,119
+can only have two of the bit planes
+
+44
+00:01:27,119 --> 00:01:29,200
+mapped to it the third one is always
+
+45
+00:01:29,200 --> 00:01:32,240
+back mapped to the sub cpu so that is
+
+46
+00:01:32,240 --> 00:01:33,920
+why we're using four color graphic today
+
+47
+00:01:33,920 --> 00:01:35,840
+and we've got some simple range checking
+
+48
+00:01:35,840 --> 00:01:37,920
+to make sure our smiley can't go off the
+
+49
+00:01:37,920 --> 00:01:39,759
+screen okay well let's go over to the
+
+50
+00:01:39,759 --> 00:01:40,960
+source code the first thing we're going
+
+51
+00:01:40,960 --> 00:01:42,960
+to do is we're going to discuss the
+
+52
+00:01:42,960 --> 00:01:44,560
+basics of the code that is actually
+
+53
+00:01:44,560 --> 00:01:46,240
+doing the keyboard reading and moving
+
+54
+00:01:46,240 --> 00:01:47,759
+the smiley around and the reason for
+
+55
+00:01:47,759 --> 00:01:50,159
+this is assuming that you don't really
+
+56
+00:01:50,159 --> 00:01:51,920
+care how the background stuff setting
+
+57
+00:01:51,920 --> 00:01:53,439
+things up works which is going to be
+
+58
+00:01:53,439 --> 00:01:54,799
+easier for you and then we'll go into
+
+59
+00:01:54,799 --> 00:01:57,280
+the details of those rather difficult
+
+60
+00:01:57,280 --> 00:01:59,280
+setup so let's go to the code and let's
+
+61
+00:01:59,280 --> 00:02:01,200
+check it out okay
+
+62
+00:02:01,200 --> 00:02:02,880
+so here's our program our program is
+
+63
+00:02:02,880 --> 00:02:04,960
+starting at the beginning of pdp-11
+
+64
+00:02:04,960 --> 00:02:07,520
+memory here is our start routine here
+
+65
+00:02:07,520 --> 00:02:08,878
+and the first thing we're doing is we're
+
+66
+00:02:08,878 --> 00:02:10,399
+initializing the screen display with
+
+67
+00:02:10,399 --> 00:02:12,879
+this init routine that is setting up the
+
+68
+00:02:12,879 --> 00:02:15,280
+screen which is 320 by 240 four colors
+
+69
+00:02:15,280 --> 00:02:17,440
+within the main cpu memory there is a
+
+70
+00:02:17,440 --> 00:02:19,920
+one remaining midplane on the sub cpu
+
+71
+00:02:19,920 --> 00:02:21,760
+we're then installing our keyboard
+
+72
+00:02:21,760 --> 00:02:23,360
+driver here which is reading in the
+
+73
+00:02:23,360 --> 00:02:25,200
+keyboard that's an interrupt handler
+
+74
+00:02:25,200 --> 00:02:27,920
+which will set a 16 bit value with any
+
+75
+00:02:27,920 --> 00:02:29,680
+key presses that occur
+
+76
+00:02:29,680 --> 00:02:32,160
+during this main loop r1 and r2 are the
+
+77
+00:02:32,160 --> 00:02:35,120
+x and y position of our players smiley
+
+78
+00:02:35,120 --> 00:02:36,959
+we have a routine called show p which
+
+79
+00:02:36,959 --> 00:02:38,640
+will show the players smiley to the
+
+80
+00:02:38,640 --> 00:02:41,040
+screen this is an xor routine and what
+
+81
+00:02:41,040 --> 00:02:42,560
+this means is if we show the sprite
+
+82
+00:02:42,560 --> 00:02:44,560
+twice at the same position the second
+
+83
+00:02:44,560 --> 00:02:46,160
+time we'll invert it and effectively
+
+84
+00:02:46,160 --> 00:02:47,840
+remove it if it's drawn to the same
+
+85
+00:02:47,840 --> 00:02:49,760
+position twice
+
+86
+00:02:49,760 --> 00:02:51,920
+so cool p will show the player we then
+
+87
+00:02:51,920 --> 00:02:54,319
+have a delay and we're calling show p
+
+88
+00:02:54,319 --> 00:02:55,760
+again to the same position which will
+
+89
+00:02:55,760 --> 00:02:58,000
+remove it what we're then doing is we're
+
+90
+00:02:58,000 --> 00:03:00,640
+reading in the value from the keyboard
+
+91
+00:03:00,640 --> 00:03:02,959
+now the keyboard routine i'm using today
+
+92
+00:03:02,959 --> 00:03:04,879
+is the one we discussed in the platform
+
+93
+00:03:04,879 --> 00:03:07,599
+series last time this has two parts one
+
+94
+00:03:07,599 --> 00:03:09,120
+is it reaching the raw data and the
+
+95
+00:03:09,120 --> 00:03:11,040
+other is it will you do an a simulated
+
+96
+00:03:11,040 --> 00:03:13,840
+joystick it decodes the key presses and
+
+97
+00:03:13,840 --> 00:03:16,000
+converts them into an up down left right
+
+98
+00:03:16,000 --> 00:03:17,760
+fire one five two five three and pause
+
+99
+00:03:17,760 --> 00:03:19,840
+sequence and so we can then test those
+
+100
+00:03:19,840 --> 00:03:22,080
+bits for our up down left and right and
+
+101
+00:03:22,080 --> 00:03:24,400
+we're doing that with the bit command
+
+102
+00:03:24,400 --> 00:03:26,560
+which is effectively like an and command
+
+103
+00:03:26,560 --> 00:03:28,560
+that doesn't alter the register so that
+
+104
+00:03:28,560 --> 00:03:31,440
+will set the flags according to bits so
+
+105
+00:03:31,440 --> 00:03:33,840
+here we're testing bit zero that one is
+
+106
+00:03:33,840 --> 00:03:36,480
+testing bit zero here and if up is not
+
+107
+00:03:36,480 --> 00:03:38,640
+pressed in other words if that bit is a
+
+108
+00:03:38,640 --> 00:03:40,480
+one then we're skipping over the next
+
+109
+00:03:40,480 --> 00:03:42,959
+section we skip down to here if up is
+
+110
+00:03:42,959 --> 00:03:44,480
+pressed though we're going to check the
+
+111
+00:03:44,480 --> 00:03:46,400
+x and y coordinates now we need to check
+
+112
+00:03:46,400 --> 00:03:48,239
+the y coordinate in this case and if
+
+113
+00:03:48,239 --> 00:03:49,440
+we're trying to get up the screen we
+
+114
+00:03:49,440 --> 00:03:50,720
+need to check we're not already at
+
+115
+00:03:50,720 --> 00:03:53,040
+position zero and if we are we skip over
+
+116
+00:03:53,040 --> 00:03:54,159
+because we're already at the top of the
+
+117
+00:03:54,159 --> 00:03:55,680
+screen but if we're not we are
+
+118
+00:03:55,680 --> 00:03:58,159
+effectively adding um 10 in octal that's
+
+119
+00:03:58,159 --> 00:04:00,000
+18 decimal of course and so that is
+
+120
+00:04:00,000 --> 00:04:02,720
+moving as one block up the screen
+
+121
+00:04:02,720 --> 00:04:04,720
+we're moving in eight pixel blocks up
+
+122
+00:04:04,720 --> 00:04:06,480
+and down to match the movement speed of
+
+123
+00:04:06,480 --> 00:04:08,640
+left and right because we're moving in
+
+124
+00:04:08,640 --> 00:04:10,959
+bit plane bytes so that is eight pixels
+
+125
+00:04:10,959 --> 00:04:13,439
+effectively left and right so that's up
+
+126
+00:04:13,439 --> 00:04:14,879
+we're then doing the same with down here
+
+127
+00:04:14,879 --> 00:04:16,399
+we're testing bit one which is has a
+
+128
+00:04:16,399 --> 00:04:18,720
+value of two so we're doing a bit of two
+
+129
+00:04:18,720 --> 00:04:20,798
+which is effectively an end of two and
+
+130
+00:04:20,798 --> 00:04:22,880
+again we're going to skip over if down
+
+131
+00:04:22,880 --> 00:04:24,320
+is not pressed but if it is pressed
+
+132
+00:04:24,320 --> 00:04:25,840
+we're checking for the bottom of the
+
+133
+00:04:25,840 --> 00:04:28,000
+screen here and so we're testing for our
+
+134
+00:04:28,000 --> 00:04:30,479
+two four three lines tall screen here
+
+135
+00:04:30,479 --> 00:04:32,160
+and we are just seeing if we're already
+
+136
+00:04:32,160 --> 00:04:33,360
+at the bottom of the screen and if we're
+
+137
+00:04:33,360 --> 00:04:35,360
+not we're moving down the screen we're
+
+138
+00:04:35,360 --> 00:04:37,120
+then doing the same for left and right
+
+139
+00:04:37,120 --> 00:04:39,199
+here again same procedure this time just
+
+140
+00:04:39,199 --> 00:04:41,199
+using the register r1 which is our x
+
+141
+00:04:41,199 --> 00:04:43,120
+position as opposed to r2 which is our y
+
+142
+00:04:43,120 --> 00:04:46,160
+position and that is effectively moving
+
+143
+00:04:46,160 --> 00:04:47,840
+our player around the screen while
+
+144
+00:04:47,840 --> 00:04:49,440
+checking the range and we've just got a
+
+145
+00:04:49,440 --> 00:04:51,840
+restart to the infinite loop here which
+
+146
+00:04:51,840 --> 00:04:53,680
+is just showing the new position of the
+
+147
+00:04:53,680 --> 00:04:54,880
+player
+
+148
+00:04:54,880 --> 00:04:56,560
+we've got a vey crude pause routine here
+
+149
+00:04:56,560 --> 00:04:58,240
+which just decreases our zero until it
+
+150
+00:04:58,240 --> 00:05:01,520
+reaches zero very very basic there the
+
+151
+00:05:01,520 --> 00:05:03,919
+show p routine here is the routine that
+
+152
+00:05:03,919 --> 00:05:07,440
+actually shows our sprite to the screen
+
+153
+00:05:07,440 --> 00:05:09,199
+okay how do we do this well what we're
+
+154
+00:05:09,199 --> 00:05:11,440
+doing here is we're calculating our vram
+
+155
+00:05:11,440 --> 00:05:14,320
+destination here in decimal our formula
+
+156
+00:05:14,320 --> 00:05:17,039
+is 32768 which is the vram base of the
+
+157
+00:05:17,039 --> 00:05:17,919
+screen
+
+158
+00:05:17,919 --> 00:05:20,960
+plus 80 times the y position each line
+
+159
+00:05:20,960 --> 00:05:24,080
+is 40 blocks wide 848 pixel blocks wide
+
+160
+00:05:24,080 --> 00:05:26,000
+but each of those blocks takes two bytes
+
+161
+00:05:26,000 --> 00:05:28,080
+so that's times 80. and then our x
+
+162
+00:05:28,080 --> 00:05:30,160
+position times two because there are two
+
+163
+00:05:30,160 --> 00:05:32,320
+blocks for the two bit planes for each x
+
+164
+00:05:32,320 --> 00:05:33,360
+position
+
+165
+00:05:33,360 --> 00:05:35,759
+so that is our calculation in octal it's
+
+166
+00:05:35,759 --> 00:05:37,759
+this and you can see that represented in
+
+167
+00:05:37,759 --> 00:05:38,479
+here
+
+168
+00:05:38,479 --> 00:05:39,759
+here we're getting the y position
+
+169
+00:05:39,759 --> 00:05:42,479
+multiplying by octal 120 and that is
+
+170
+00:05:42,479 --> 00:05:44,800
+then having that value there that's a
+
+171
+00:05:44,800 --> 00:05:46,400
+hundred thousand i believe added to it
+
+172
+00:05:46,400 --> 00:05:48,479
+in octal that is the vram base that's
+
+173
+00:05:48,479 --> 00:05:50,479
+the start of our screen memory we're
+
+174
+00:05:50,479 --> 00:05:52,800
+then effectively doubling the x position
+
+175
+00:05:52,800 --> 00:05:54,560
+by shifting it to the left by one bit
+
+176
+00:05:54,560 --> 00:05:57,280
+and then adding that as well so r1 now
+
+177
+00:05:57,280 --> 00:05:59,360
+contains the vram destination of the
+
+178
+00:05:59,360 --> 00:06:01,280
+smiley for the position we want to show
+
+179
+00:06:01,280 --> 00:06:02,400
+it to
+
+180
+00:06:02,400 --> 00:06:03,360
+okay
+
+181
+00:06:03,360 --> 00:06:04,960
+now we are loading the address of our
+
+182
+00:06:04,960 --> 00:06:07,440
+sprite into r4 and we're loading the
+
+183
+00:06:07,440 --> 00:06:10,160
+height of our sprite into r5 here now
+
+184
+00:06:10,160 --> 00:06:12,479
+this routine has been based on one that
+
+185
+00:06:12,479 --> 00:06:14,080
+was designed to work with larger sprites
+
+186
+00:06:14,080 --> 00:06:15,919
+and i've kept that functionality in so
+
+187
+00:06:15,919 --> 00:06:18,160
+we've actually got a loop even though it
+
+188
+00:06:18,160 --> 00:06:20,560
+aspect is only one byte wide here so
+
+189
+00:06:20,560 --> 00:06:22,560
+that's why that's doing that unnecessary
+
+190
+00:06:22,560 --> 00:06:24,720
+thing so we're then just backing up the
+
+191
+00:06:24,720 --> 00:06:27,039
+address of the destination for this line
+
+192
+00:06:27,039 --> 00:06:30,080
+into our three we're moving a word out
+
+193
+00:06:30,080 --> 00:06:32,080
+of our four the source and we're
+
+194
+00:06:32,080 --> 00:06:34,639
+excelling at with the screen in r3 so
+
+195
+00:06:34,639 --> 00:06:36,960
+that is moving the two bit planes for
+
+196
+00:06:36,960 --> 00:06:39,120
+one byte block one eight pixel block
+
+197
+00:06:39,120 --> 00:06:40,800
+exerting it with the screen inverting
+
+198
+00:06:40,800 --> 00:06:42,400
+the screen with that value meaning as i
+
+199
+00:06:42,400 --> 00:06:43,759
+say if we draw it twice it will
+
+200
+00:06:43,759 --> 00:06:45,600
+disappear the second time well we're
+
+201
+00:06:45,600 --> 00:06:47,360
+repeating for any of the horizontal
+
+202
+00:06:47,360 --> 00:06:48,800
+blocks but actually there aren't any in
+
+203
+00:06:48,800 --> 00:06:50,479
+this example but as i say if you were
+
+204
+00:06:50,479 --> 00:06:52,000
+using a bigger sprite you would want a
+
+205
+00:06:52,000 --> 00:06:54,800
+wider value high value there we are then
+
+206
+00:06:54,800 --> 00:06:56,800
+moving down one line adding 80 in
+
+207
+00:06:56,800 --> 00:06:59,440
+decimal here moving us down one line
+
+208
+00:06:59,440 --> 00:07:02,240
+and then we are repeating so that is how
+
+209
+00:07:02,240 --> 00:07:04,720
+we are drawing all of the lines of our
+
+210
+00:07:04,720 --> 00:07:07,199
+smiley sprite now we've got our test
+
+211
+00:07:07,199 --> 00:07:08,960
+keyboard value here this is the value
+
+212
+00:07:08,960 --> 00:07:11,599
+that has been read in from the keyboard
+
+213
+00:07:11,599 --> 00:07:12,880
+interrupt handle the interrupt handler
+
+214
+00:07:12,880 --> 00:07:14,400
+will automatically set that and it's the
+
+215
+00:07:14,400 --> 00:07:16,639
+second byte that we want to read in for
+
+216
+00:07:16,639 --> 00:07:18,880
+the joystick simulation if we wanted raw
+
+217
+00:07:18,880 --> 00:07:20,800
+data which is a bit harder we would use
+
+218
+00:07:20,800 --> 00:07:22,400
+the first bite
+
+219
+00:07:22,400 --> 00:07:24,880
+here is our smiley sprite so our sprite
+
+220
+00:07:24,880 --> 00:07:26,560
+is eight lines so you can see there's
+
+221
+00:07:26,560 --> 00:07:28,240
+eight lines here and there are two bit
+
+222
+00:07:28,240 --> 00:07:31,039
+planes for each line each eight pixel
+
+223
+00:07:31,039 --> 00:07:33,840
+block is a single byte but then for this
+
+224
+00:07:33,840 --> 00:07:35,840
+for the four colors there are two bytes
+
+225
+00:07:35,840 --> 00:07:37,840
+so basically the first one of these is
+
+226
+00:07:37,840 --> 00:07:39,120
+the first bit plane and you can see
+
+227
+00:07:39,120 --> 00:07:41,919
+that's mostly set because that's for
+
+228
+00:07:41,919 --> 00:07:44,000
+color one but then if we want color two
+
+229
+00:07:44,000 --> 00:07:46,080
+or color three we need to set the second
+
+230
+00:07:46,080 --> 00:07:47,440
+book plane which you can see is rarely
+
+231
+00:07:47,440 --> 00:07:49,120
+used it's used basically for the smiling
+
+232
+00:07:49,120 --> 00:07:51,759
+the eyes so you can see that there
+
+233
+00:07:51,759 --> 00:07:54,800
+okay so that's our smiley there as i say
+
+234
+00:07:54,800 --> 00:07:56,160
+you can create your own with accurate
+
+235
+00:07:56,160 --> 00:07:57,840
+sprite edit or if you want to you can
+
+236
+00:07:57,840 --> 00:08:00,080
+create it in more numeric values and
+
+237
+00:08:00,080 --> 00:08:03,039
+that's the basics of our routine for
+
+238
+00:08:03,039 --> 00:08:04,240
+actually moving our smiley around the
+
+239
+00:08:04,240 --> 00:08:05,440
+screen so that's the part you would want
+
+240
+00:08:05,440 --> 00:08:06,960
+to modify if you were making your own
+
+241
+00:08:06,960 --> 00:08:08,560
+game and you didn't want to worry about
+
+242
+00:08:08,560 --> 00:08:10,960
+the screen setup or how to read in the
+
+243
+00:08:10,960 --> 00:08:12,720
+keyboard well what if you want to know
+
+244
+00:08:12,720 --> 00:08:15,199
+about that well okay brace yourself
+
+245
+00:08:15,199 --> 00:08:16,479
+because we're going to cover that right
+
+246
+00:08:16,479 --> 00:08:17,680
+now
+
+247
+00:08:17,680 --> 00:08:19,759
+so the fundamentals are the send command
+
+248
+00:08:19,759 --> 00:08:21,840
+routine what we have to do is we have to
+
+249
+00:08:21,840 --> 00:08:24,319
+transfer a command to the sub cpu and
+
+250
+00:08:24,319 --> 00:08:26,479
+execute it on the sub cpu we need to do
+
+251
+00:08:26,479 --> 00:08:27,840
+that if we want to install an interrupt
+
+252
+00:08:27,840 --> 00:08:29,199
+handler if we want to define a screen
+
+253
+00:08:29,199 --> 00:08:30,720
+layout things like that
+
+254
+00:08:30,720 --> 00:08:33,279
+now we have this sequence of data here
+
+255
+00:08:33,279 --> 00:08:35,200
+it's a little bit complicated but this
+
+256
+00:08:35,200 --> 00:08:37,279
+is in a fixed format which is the
+
+257
+00:08:37,279 --> 00:08:39,599
+correct format for instigating a command
+
+258
+00:08:39,599 --> 00:08:42,320
+on the sub cpu so the sub cpu has its
+
+259
+00:08:42,320 --> 00:08:44,480
+own operating system and we have to give
+
+260
+00:08:44,480 --> 00:08:45,920
+it data in the correct format that it
+
+261
+00:08:45,920 --> 00:08:47,360
+will understand and that's what we're
+
+262
+00:08:47,360 --> 00:08:48,959
+doing there
+
+263
+00:08:48,959 --> 00:08:51,120
+now one thing you do need to know about
+
+264
+00:08:51,120 --> 00:08:53,600
+is this flag end byte here yeah this is
+
+265
+00:08:53,600 --> 00:08:57,120
+a 16-bit value sorry now what this is um
+
+266
+00:08:57,120 --> 00:08:59,440
+this is a value on the main cpu but the
+
+267
+00:08:59,440 --> 00:09:02,160
+sub cpu can access main cpu memory via a
+
+268
+00:09:02,160 --> 00:09:04,560
+device known as the wrap device and so
+
+269
+00:09:04,560 --> 00:09:06,320
+what the sub cpu does is it's doing its
+
+270
+00:09:06,320 --> 00:09:08,160
+little job when it finishes its job it
+
+271
+00:09:08,160 --> 00:09:10,160
+alters this byte on the main cpu's
+
+272
+00:09:10,160 --> 00:09:11,760
+memory so that the main cpu knows the
+
+273
+00:09:11,760 --> 00:09:14,720
+sub cpu is finished so that we will see
+
+274
+00:09:14,720 --> 00:09:17,760
+in part of this code okay
+
+275
+00:09:17,760 --> 00:09:19,519
+so at the start of our routine here
+
+276
+00:09:19,519 --> 00:09:20,720
+we're just going to go over this in a
+
+277
+00:09:20,720 --> 00:09:22,640
+very simple way because it's it's really
+
+278
+00:09:22,640 --> 00:09:24,959
+too complicated and um it's kind of one
+
+279
+00:09:24,959 --> 00:09:26,800
+of the things if you if you can't
+
+280
+00:09:26,800 --> 00:09:28,080
+if you can't pick it apart yourself
+
+281
+00:09:28,080 --> 00:09:29,600
+which i would understand then you
+
+282
+00:09:29,600 --> 00:09:30,959
+probably just want to leave it alone and
+
+283
+00:09:30,959 --> 00:09:33,279
+use it as is so what we're doing here is
+
+284
+00:09:33,279 --> 00:09:35,600
+we are clearing the flag at the start
+
+285
+00:09:35,600 --> 00:09:37,600
+we're then setting up the kind of
+
+286
+00:09:37,600 --> 00:09:38,880
+request we're making and what we're
+
+287
+00:09:38,880 --> 00:09:40,959
+requesting is we're requesting the sub
+
+288
+00:09:40,959 --> 00:09:44,080
+cpu allocator some memory and we're then
+
+289
+00:09:44,080 --> 00:09:46,800
+running this routine called ppu out now
+
+290
+00:09:46,800 --> 00:09:49,440
+ppu out is the command that actually
+
+291
+00:09:49,440 --> 00:09:52,800
+sends a sequence of data to the sub cpu
+
+292
+00:09:52,800 --> 00:09:54,240
+because we're actually going to do
+
+293
+00:09:54,240 --> 00:09:57,760
+multiple tasks first we need to actually
+
+294
+00:09:57,760 --> 00:09:59,440
+allocate some memory then we need to
+
+295
+00:09:59,440 --> 00:10:00,959
+transfer our program then we need to
+
+296
+00:10:00,959 --> 00:10:02,880
+execute our program and then we want to
+
+297
+00:10:02,880 --> 00:10:04,399
+in this case release the memory so we're
+
+298
+00:10:04,399 --> 00:10:06,480
+doing all of these these are all tasks
+
+299
+00:10:06,480 --> 00:10:08,959
+with this ppu out they just have
+
+300
+00:10:08,959 --> 00:10:11,120
+different kinds of requests the request
+
+301
+00:10:11,120 --> 00:10:12,720
+will change each time you can see that
+
+302
+00:10:12,720 --> 00:10:15,200
+it's 30 there is 20 and so on and some
+
+303
+00:10:15,200 --> 00:10:16,480
+of the parameters will change
+
+304
+00:10:16,480 --> 00:10:17,680
+accordingly
+
+305
+00:10:17,680 --> 00:10:20,240
+okay so how do we actually transfer our
+
+306
+00:10:20,240 --> 00:10:22,480
+command well what we're doing here is we
+
+307
+00:10:22,480 --> 00:10:24,320
+are transferring the ps parameters we're
+
+308
+00:10:24,320 --> 00:10:26,959
+loading the address into r0
+
+309
+00:10:26,959 --> 00:10:28,959
+we're loading the number of bytes here
+
+310
+00:10:28,959 --> 00:10:30,560
+eight bytes in decimal
+
+311
+00:10:30,560 --> 00:10:33,600
+and we are transferring one byte
+
+312
+00:10:33,600 --> 00:10:36,320
+from r0 which is the parameters to the
+
+313
+00:10:36,320 --> 00:10:38,800
+port one seven six six seven six which
+
+314
+00:10:38,800 --> 00:10:41,839
+is channel two to the sub cpu we
+
+315
+00:10:41,839 --> 00:10:43,360
+transfer one byte and then we wait for
+
+316
+00:10:43,360 --> 00:10:45,279
+that byte to be processed by testing one
+
+317
+00:10:45,279 --> 00:10:47,839
+seven six six seven four and when that
+
+318
+00:10:47,839 --> 00:10:49,040
+is complete
+
+319
+00:10:49,040 --> 00:10:51,120
+completed when the data has been read by
+
+320
+00:10:51,120 --> 00:10:53,600
+the sub cpu we send the next byte and we
+
+321
+00:10:53,600 --> 00:10:56,000
+repeat until we're done
+
+322
+00:10:56,000 --> 00:10:59,120
+okay so the first request is an allocate
+
+323
+00:10:59,120 --> 00:11:01,519
+memory request and when that comes back
+
+324
+00:11:01,519 --> 00:11:03,600
+the memory that is available to us has
+
+325
+00:11:03,600 --> 00:11:05,680
+been allocated and we're storing that in
+
+326
+00:11:05,680 --> 00:11:08,000
+r5 for later the next one is that we
+
+327
+00:11:08,000 --> 00:11:10,079
+want to transfer our program from the
+
+328
+00:11:10,079 --> 00:11:12,560
+main cpu to the sub cpu
+
+329
+00:11:12,560 --> 00:11:14,800
+then we want to actually execute the
+
+330
+00:11:14,800 --> 00:11:16,800
+program on the sub cpu
+
+331
+00:11:16,800 --> 00:11:19,839
+we then wait for the flag end to change
+
+332
+00:11:19,839 --> 00:11:21,200
+which will change because the last
+
+333
+00:11:21,200 --> 00:11:23,200
+command of our program on running on the
+
+334
+00:11:23,200 --> 00:11:24,959
+sub cpu will change it
+
+335
+00:11:24,959 --> 00:11:26,720
+and then we release the memory that was
+
+336
+00:11:26,720 --> 00:11:29,360
+allocated and that is the procedure for
+
+337
+00:11:29,360 --> 00:11:30,959
+all of the examples here of when we're
+
+338
+00:11:30,959 --> 00:11:34,240
+running a program on the sub cpu okay
+
+339
+00:11:34,240 --> 00:11:36,320
+now the first program we're running is
+
+340
+00:11:36,320 --> 00:11:37,839
+the init routine here and you can see
+
+341
+00:11:37,839 --> 00:11:39,920
+there's some rather huge documentation
+
+342
+00:11:39,920 --> 00:11:42,399
+there on the memory layout of the vram
+
+343
+00:11:42,399 --> 00:11:44,320
+and we're really not going to cover this
+
+344
+00:11:44,320 --> 00:11:46,560
+in detail it's extremely complicated i'm
+
+345
+00:11:46,560 --> 00:11:48,880
+only going to give a very very brief
+
+346
+00:11:48,880 --> 00:11:50,880
+overview of what we're doing here
+
+347
+00:11:50,880 --> 00:11:52,560
+so we've got an init routine here which
+
+348
+00:11:52,560 --> 00:11:54,720
+will set up this screen memory and the
+
+349
+00:11:54,720 --> 00:11:57,040
+main reason we're doing this is normally
+
+350
+00:11:57,040 --> 00:11:59,120
+the video memory can only be accessed
+
+351
+00:11:59,120 --> 00:12:01,360
+via the wrap device and that's very slow
+
+352
+00:12:01,360 --> 00:12:02,320
+so
+
+353
+00:12:02,320 --> 00:12:04,079
+so that we've got something easier we're
+
+354
+00:12:04,079 --> 00:12:05,680
+reallocating the memory so that it's
+
+355
+00:12:05,680 --> 00:12:07,839
+within the addressable range or from the
+
+356
+00:12:07,839 --> 00:12:08,839
+main
+
+357
+00:12:08,839 --> 00:12:11,600
+cpu okay so the first thing we're doing
+
+358
+00:12:11,600 --> 00:12:14,639
+here is we are patching in the address
+
+359
+00:12:14,639 --> 00:12:16,480
+for our scan line table the scan line
+
+360
+00:12:16,480 --> 00:12:18,959
+table defines the layout of the screen
+
+361
+00:12:18,959 --> 00:12:21,040
+one line at a time
+
+362
+00:12:21,040 --> 00:12:22,959
+on the sub cpu this is defined by memory
+
+363
+00:12:22,959 --> 00:12:25,440
+address 272 in octal and we're actually
+
+364
+00:12:25,440 --> 00:12:27,120
+defining the scan line table at memory
+
+365
+00:12:27,120 --> 00:12:28,560
+just 4 000 in oxford so we're
+
+366
+00:12:28,560 --> 00:12:31,360
+transferring that memory address to 272
+
+367
+00:12:31,360 --> 00:12:33,040
+and that defines our custom scan line
+
+368
+00:12:33,040 --> 00:12:34,880
+table will be used we're then loading in
+
+369
+00:12:34,880 --> 00:12:36,880
+the destination vram of the first line
+
+370
+00:12:36,880 --> 00:12:38,399
+of a scanlan table though it should be
+
+371
+00:12:38,399 --> 00:12:40,079
+noted the first few lines aren't
+
+372
+00:12:40,079 --> 00:12:43,680
+actually visible on the screen okay
+
+373
+00:12:43,680 --> 00:12:45,440
+so what we're going to do is we're going
+
+374
+00:12:45,440 --> 00:12:48,320
+to use some special commands each line
+
+375
+00:12:48,320 --> 00:12:50,079
+of the scanline table can do different
+
+376
+00:12:50,079 --> 00:12:52,240
+tasks it can define just a line as raw
+
+377
+00:12:52,240 --> 00:12:54,560
+data but it can also change the memory
+
+378
+00:12:54,560 --> 00:12:56,240
+layout to change the screen resolution
+
+379
+00:12:56,240 --> 00:12:57,680
+change the colors and things like that
+
+380
+00:12:57,680 --> 00:12:59,839
+so you can do clever things like have
+
+381
+00:12:59,839 --> 00:13:01,839
+the palette change at different lines of
+
+382
+00:13:01,839 --> 00:13:03,680
+the screen quite complicated but quite
+
+383
+00:13:03,680 --> 00:13:05,440
+clever we're not going to do that today
+
+384
+00:13:05,440 --> 00:13:07,120
+though all we're going to do is we're
+
+385
+00:13:07,120 --> 00:13:08,880
+going to first set up the screen to be
+
+386
+00:13:08,880 --> 00:13:11,760
+320 pixels wide as opposed to 640. we're
+
+387
+00:13:11,760 --> 00:13:13,519
+then going to set our initial colors
+
+388
+00:13:13,519 --> 00:13:14,639
+here so we've got these little
+
+389
+00:13:14,639 --> 00:13:16,160
+subroutines that are going to do these
+
+390
+00:13:16,160 --> 00:13:17,440
+kind of jobs
+
+391
+00:13:17,440 --> 00:13:19,120
+and boy are they complicated which is
+
+392
+00:13:19,120 --> 00:13:20,320
+why we're not going to go over them in
+
+393
+00:13:20,320 --> 00:13:22,399
+great detail here so basically you can
+
+394
+00:13:22,399 --> 00:13:24,399
+see those lines here which are doing the
+
+395
+00:13:24,399 --> 00:13:26,480
+job of actually setting up things here
+
+396
+00:13:26,480 --> 00:13:27,920
+and so
+
+397
+00:13:27,920 --> 00:13:30,000
+here you can see we're setting this is a
+
+398
+00:13:30,000 --> 00:13:32,320
+line to set up the scale this is a line
+
+399
+00:13:32,320 --> 00:13:33,760
+to set up the color so if you want to
+
+400
+00:13:33,760 --> 00:13:35,040
+change the palette you would want to
+
+401
+00:13:35,040 --> 00:13:37,519
+change this line if you wanted to change
+
+402
+00:13:37,519 --> 00:13:39,120
+the resolution you'd want to change this
+
+403
+00:13:39,120 --> 00:13:41,920
+line but these are setting up valid data
+
+404
+00:13:41,920 --> 00:13:44,160
+format lines within the scan line table
+
+405
+00:13:44,160 --> 00:13:46,240
+so first we're setting the resolution
+
+406
+00:13:46,240 --> 00:13:48,240
+then we're setting up the palette and
+
+407
+00:13:48,240 --> 00:13:50,320
+then what we're doing here is we're
+
+408
+00:13:50,320 --> 00:13:53,199
+setting up 32 lines which are actually
+
+409
+00:13:53,199 --> 00:13:55,519
+invisible and we're so we're setting up
+
+410
+00:13:55,519 --> 00:13:58,399
+s to stab f here and this is to create
+
+411
+00:13:58,399 --> 00:13:59,920
+filler lines and basically all this is
+
+412
+00:13:59,920 --> 00:14:02,240
+doing is creating a sequence of lines
+
+413
+00:14:02,240 --> 00:14:04,160
+all of which point to the same vram
+
+414
+00:14:04,160 --> 00:14:05,440
+address because they're not actually
+
+415
+00:14:05,440 --> 00:14:08,399
+going to show any of the screen data
+
+416
+00:14:08,399 --> 00:14:10,720
+it's just filler so we're creating 32 of
+
+417
+00:14:10,720 --> 00:14:12,560
+those in decimal here and then we're
+
+418
+00:14:12,560 --> 00:14:13,920
+going to create the main body of the
+
+419
+00:14:13,920 --> 00:14:15,360
+screen and the main body of the screen
+
+420
+00:14:15,360 --> 00:14:17,519
+is showing memory address 40 000 in
+
+421
+00:14:17,519 --> 00:14:20,160
+octal 30 000 was for the top of the
+
+422
+00:14:20,160 --> 00:14:22,560
+screen but as i say that isn't actually
+
+423
+00:14:22,560 --> 00:14:24,079
+going to change that's just the black
+
+424
+00:14:24,079 --> 00:14:25,920
+border at the top of the screen
+
+425
+00:14:25,920 --> 00:14:26,800
+so
+
+426
+00:14:26,800 --> 00:14:28,880
+the vram for the actual visible screen
+
+427
+00:14:28,880 --> 00:14:31,279
+is 40 000 in octal although it should be
+
+428
+00:14:31,279 --> 00:14:33,199
+noted that this is the memory address
+
+429
+00:14:33,199 --> 00:14:35,600
+for the scanline table the actual memory
+
+430
+00:14:35,600 --> 00:14:37,360
+address that that memory appears in the
+
+431
+00:14:37,360 --> 00:14:40,160
+cpu is different so as i say we you will
+
+432
+00:14:40,160 --> 00:14:41,680
+see a different memory address in our
+
+433
+00:14:41,680 --> 00:14:43,600
+calculations for the vram destination
+
+434
+00:14:43,600 --> 00:14:45,040
+because of that
+
+435
+00:14:45,040 --> 00:14:47,440
+and we're creating 240 lines of the
+
+436
+00:14:47,440 --> 00:14:50,320
+actual main body of our screen and then
+
+437
+00:14:50,320 --> 00:14:52,720
+finally we're defining a an end of the
+
+438
+00:14:52,720 --> 00:14:54,720
+screen and looping back to the start of
+
+439
+00:14:54,720 --> 00:14:55,760
+the screen
+
+440
+00:14:55,760 --> 00:14:58,959
+now once we've defined our
+
+441
+00:14:58,959 --> 00:15:00,800
+screen layout in this case but any time
+
+442
+00:15:00,800 --> 00:15:02,720
+we've done a job on the subcpu we need
+
+443
+00:15:02,720 --> 00:15:04,480
+to send a complete command back to the
+
+444
+00:15:04,480 --> 00:15:06,720
+main cpu and we do this via the wrap
+
+445
+00:15:06,720 --> 00:15:08,639
+device this is a device that can write
+
+446
+00:15:08,639 --> 00:15:10,880
+any of the memory and in this case we
+
+447
+00:15:10,880 --> 00:15:12,639
+want to tell the main cpus memory that
+
+448
+00:15:12,639 --> 00:15:14,720
+the job is done now we select the memory
+
+449
+00:15:14,720 --> 00:15:17,639
+address to write to in with port
+
+450
+00:15:17,639 --> 00:15:20,560
+177010 and we need to calculate the vram
+
+451
+00:15:20,560 --> 00:15:22,639
+address for flag end but because the
+
+452
+00:15:22,639 --> 00:15:25,199
+main cpu's memory is actually two banks
+
+453
+00:15:25,199 --> 00:15:27,440
+interlaced together movement alternating
+
+454
+00:15:27,440 --> 00:15:29,360
+bytes we divide the memory address by
+
+455
+00:15:29,360 --> 00:15:31,519
+two for the calculated address that the
+
+456
+00:15:31,519 --> 00:15:33,759
+wrap will want to alter that byte and
+
+457
+00:15:33,759 --> 00:15:36,639
+we're then writing the value minus one
+
+458
+00:15:36,639 --> 00:15:37,519
+to
+
+459
+00:15:37,519 --> 00:15:39,279
+those memory bytes and so we write that
+
+460
+00:15:39,279 --> 00:15:41,360
+value to 177014
+
+461
+00:15:41,360 --> 00:15:43,600
+and that will set flag end to negative
+
+462
+00:15:43,600 --> 00:15:45,759
+in the main cpu memory
+
+463
+00:15:45,759 --> 00:15:47,600
+telling the main cpu that the job is
+
+464
+00:15:47,600 --> 00:15:49,519
+done and then the main cpu will release
+
+465
+00:15:49,519 --> 00:15:51,040
+the memory and so on
+
+466
+00:15:51,040 --> 00:15:53,279
+okay so that's how we're setting up our
+
+467
+00:15:53,279 --> 00:15:55,360
+vram at the start of our program so
+
+468
+00:15:55,360 --> 00:15:57,360
+that's that command there that sets up
+
+469
+00:15:57,360 --> 00:15:59,519
+the screen what about the key command
+
+470
+00:15:59,519 --> 00:16:01,120
+well we're going to cover this as well
+
+471
+00:16:01,120 --> 00:16:02,959
+we will cover it a little bit quickly
+
+472
+00:16:02,959 --> 00:16:04,959
+but we'll go into some detail
+
+473
+00:16:04,959 --> 00:16:07,199
+okay so we are going to set up our own
+
+474
+00:16:07,199 --> 00:16:09,519
+interrupt handler called key handle now
+
+475
+00:16:09,519 --> 00:16:11,199
+we're having to calculate this relative
+
+476
+00:16:11,199 --> 00:16:12,959
+to the current running line count
+
+477
+00:16:12,959 --> 00:16:14,000
+because we don't actually know the
+
+478
+00:16:14,000 --> 00:16:15,199
+memory address this will end up
+
+479
+00:16:15,199 --> 00:16:17,120
+executing from because it's going to be
+
+480
+00:16:17,120 --> 00:16:18,959
+transferred to allocated memory on the
+
+481
+00:16:18,959 --> 00:16:21,199
+sub cpu now the current line number can
+
+482
+00:16:21,199 --> 00:16:23,120
+be got from by using the full stop
+
+483
+00:16:23,120 --> 00:16:25,519
+symbol here so key handle minus dot is
+
+484
+00:16:25,519 --> 00:16:27,680
+calculating a relative address in the
+
+485
+00:16:27,680 --> 00:16:29,600
+code and we're then editing that to the
+
+486
+00:16:29,600 --> 00:16:31,680
+program counter when this is running on
+
+487
+00:16:31,680 --> 00:16:33,680
+the sub cpu so that will calculate the
+
+488
+00:16:33,680 --> 00:16:36,000
+correct address for the key handle of
+
+489
+00:16:36,000 --> 00:16:37,519
+once this program's finally running on
+
+490
+00:16:37,519 --> 00:16:39,600
+the sub cpu and what we're doing is
+
+491
+00:16:39,600 --> 00:16:41,199
+we're installing that interrupt handler
+
+492
+00:16:41,199 --> 00:16:42,880
+on the sub cpu by transferring that
+
+493
+00:16:42,880 --> 00:16:45,120
+address to memory address 300 which is
+
+494
+00:16:45,120 --> 00:16:47,120
+the interrupt handler address
+
+495
+00:16:47,120 --> 00:16:48,880
+that means that the keyhandler interrupt
+
+496
+00:16:48,880 --> 00:16:51,040
+handler will run on the sub cpu every
+
+497
+00:16:51,040 --> 00:16:53,440
+time a key is pressed we're then
+
+498
+00:16:53,440 --> 00:16:54,959
+setting the flag end and we're actually
+
+499
+00:16:54,959 --> 00:16:56,320
+returning that is actually the end of
+
+500
+00:16:56,320 --> 00:16:57,920
+the program because all of the rest of
+
+501
+00:16:57,920 --> 00:16:59,839
+the job is going to be done when the
+
+502
+00:16:59,839 --> 00:17:02,320
+interrupt occurs okay so when the
+
+503
+00:17:02,320 --> 00:17:04,400
+interrupt occurs key handle will execute
+
+504
+00:17:04,400 --> 00:17:06,720
+automatically on the sub cpu we need to
+
+505
+00:17:06,720 --> 00:17:08,079
+backup some registers and we need to
+
+506
+00:17:08,079 --> 00:17:10,160
+back up the wrapper drive address as
+
+507
+00:17:10,160 --> 00:17:12,160
+well because the wrapper device is being
+
+508
+00:17:12,160 --> 00:17:13,599
+used by the operating system but we're
+
+509
+00:17:13,599 --> 00:17:15,839
+going to use it to store the keys that
+
+510
+00:17:15,839 --> 00:17:18,880
+have been pressed so we are getting the
+
+511
+00:17:18,880 --> 00:17:20,640
+current key that has been pressed by
+
+512
+00:17:20,640 --> 00:17:23,599
+using one triple seven o2
+
+513
+00:17:23,599 --> 00:17:25,520
+that's the current key press and then
+
+514
+00:17:25,520 --> 00:17:26,720
+what we're going to do is we're then
+
+515
+00:17:26,720 --> 00:17:29,120
+going to actually process that key press
+
+516
+00:17:29,120 --> 00:17:31,280
+now the format of the key presses is a
+
+517
+00:17:31,280 --> 00:17:33,760
+little bit odd and slightly annoying but
+
+518
+00:17:33,760 --> 00:17:36,160
+it is um it's perfectly usable just a
+
+519
+00:17:36,160 --> 00:17:38,400
+little bit annoying so basically we have
+
+520
+00:17:38,400 --> 00:17:40,080
+a series of key presses depending on the
+
+521
+00:17:40,080 --> 00:17:41,440
+keys we want to read and we're going to
+
+522
+00:17:41,440 --> 00:17:43,679
+read the cursor keys primarily here when
+
+523
+00:17:43,679 --> 00:17:45,200
+a key is pressed down the top bit will
+
+524
+00:17:45,200 --> 00:17:46,960
+be zero and the other seven bits will be
+
+525
+00:17:46,960 --> 00:17:49,200
+the key code when a key is released the
+
+526
+00:17:49,200 --> 00:17:51,520
+top bit will be one the next three bits
+
+527
+00:17:51,520 --> 00:17:53,200
+will be zero and we will get a partial
+
+528
+00:17:53,200 --> 00:17:55,200
+keyboard code in the bottom four bits so
+
+529
+00:17:55,200 --> 00:17:57,200
+we don't get the full key code
+
+530
+00:17:57,200 --> 00:17:58,720
+now what we're going to do is we're
+
+531
+00:17:58,720 --> 00:18:00,400
+going to test the top bit
+
+532
+00:18:00,400 --> 00:18:02,559
+if the top bit is one then the minus
+
+533
+00:18:02,559 --> 00:18:04,080
+flag will be set and so we're going to
+
+534
+00:18:04,080 --> 00:18:06,320
+jump to this key up routine here
+
+535
+00:18:06,320 --> 00:18:08,000
+otherwise we're going to jump to this
+
+536
+00:18:08,000 --> 00:18:08,960
+key
+
+537
+00:18:08,960 --> 00:18:11,200
+down routine here just after that branch
+
+538
+00:18:11,200 --> 00:18:13,120
+minus and what this is going to do is
+
+539
+00:18:13,120 --> 00:18:15,280
+it's going to test a key map these are
+
+540
+00:18:15,280 --> 00:18:17,520
+the key presses for our keys up down
+
+541
+00:18:17,520 --> 00:18:19,679
+left right space enter shift and escape
+
+542
+00:18:19,679 --> 00:18:21,840
+that's the eight key presses that will
+
+543
+00:18:21,840 --> 00:18:24,160
+make up eight bits of the returned byte
+
+544
+00:18:24,160 --> 00:18:25,679
+and so we're simulating a kind of
+
+545
+00:18:25,679 --> 00:18:26,960
+joystick here
+
+546
+00:18:26,960 --> 00:18:28,799
+so if you wanted to change the direction
+
+547
+00:18:28,799 --> 00:18:30,240
+keys or something you would change these
+
+548
+00:18:30,240 --> 00:18:31,919
+key codes here and hopefully you don't
+
+549
+00:18:31,919 --> 00:18:34,000
+need to actually change the routine
+
+550
+00:18:34,000 --> 00:18:35,840
+so what the routine is doing here is
+
+551
+00:18:35,840 --> 00:18:37,600
+it's loading in a byte from that lookup
+
+552
+00:18:37,600 --> 00:18:40,160
+table here and it's repeating until it
+
+553
+00:18:40,160 --> 00:18:42,400
+either finds a key press or is done if
+
+554
+00:18:42,400 --> 00:18:44,799
+the key matches then what is happening
+
+555
+00:18:44,799 --> 00:18:48,000
+is we are clearing the bits that match
+
+556
+00:18:48,000 --> 00:18:50,160
+the um second byte of the key code so
+
+557
+00:18:50,160 --> 00:18:53,360
+for example if the key code was 154 then
+
+558
+00:18:53,360 --> 00:18:55,760
+the key up has been pressed and we would
+
+559
+00:18:55,760 --> 00:18:58,559
+want to clear bit zero and we would do
+
+560
+00:18:58,559 --> 00:19:00,799
+that by doing a bit clear with the value
+
+561
+00:19:00,799 --> 00:19:03,600
+one and so this is assuming that an
+
+562
+00:19:03,600 --> 00:19:05,280
+unpressed key will have a value of two
+
+563
+00:19:05,280 --> 00:19:07,600
+five five and a press key will have a
+
+564
+00:19:07,600 --> 00:19:10,880
+value of zero for its bit and so that's
+
+565
+00:19:10,880 --> 00:19:12,960
+what we're doing here so we are just
+
+566
+00:19:12,960 --> 00:19:15,600
+repeatedly looking through skipping over
+
+567
+00:19:15,600 --> 00:19:18,000
+the um that mask for the keys that
+
+568
+00:19:18,000 --> 00:19:19,840
+aren't pressed when we find a key that
+
+569
+00:19:19,840 --> 00:19:21,600
+is pressed we're clearing the bits and
+
+570
+00:19:21,600 --> 00:19:23,440
+we're doing that by transferring to the
+
+571
+00:19:23,440 --> 00:19:26,320
+wrap address the the wrap device second
+
+572
+00:19:26,320 --> 00:19:27,960
+byte address at
+
+573
+00:19:27,960 --> 00:19:31,039
+177015 and that will set the second byte
+
+574
+00:19:31,039 --> 00:19:34,720
+of the key test value in the main cpu
+
+575
+00:19:34,720 --> 00:19:36,880
+memory and so that is setting those
+
+576
+00:19:36,880 --> 00:19:39,039
+joystick values of simulated joystick
+
+577
+00:19:39,039 --> 00:19:41,039
+values that we were reading before when
+
+578
+00:19:41,039 --> 00:19:43,520
+a key is pressed down we are comparing
+
+579
+00:19:43,520 --> 00:19:46,400
+to the entire byte reading from that um
+
+580
+00:19:46,400 --> 00:19:49,039
+that keep keymap table there the entire
+
+581
+00:19:49,039 --> 00:19:51,280
+bike but when a key is up the routine is
+
+582
+00:19:51,280 --> 00:19:52,480
+different
+
+583
+00:19:52,480 --> 00:19:54,400
+first we're clearing the top bit of the
+
+584
+00:19:54,400 --> 00:19:56,320
+parameter that we read in because the
+
+585
+00:19:56,320 --> 00:19:59,039
+top bit is denoting the key up itself
+
+586
+00:19:59,039 --> 00:20:00,240
+and then what we're doing is we're
+
+587
+00:20:00,240 --> 00:20:02,640
+reading the bytes as before from the
+
+588
+00:20:02,640 --> 00:20:05,520
+lookup table of the key map but because
+
+589
+00:20:05,520 --> 00:20:07,120
+only four of the bits are actually set
+
+590
+00:20:07,120 --> 00:20:08,640
+by the key up we're clearing the
+
+591
+00:20:08,640 --> 00:20:10,799
+remaining bits here and we are then
+
+592
+00:20:10,799 --> 00:20:12,880
+comparing to the
+
+593
+00:20:12,880 --> 00:20:14,960
+the value that was been read in by the
+
+594
+00:20:14,960 --> 00:20:16,480
+interrupt handler so that's the key
+
+595
+00:20:16,480 --> 00:20:19,280
+press value and if the value matches
+
+596
+00:20:19,280 --> 00:20:21,039
+then we are setting the bits effectively
+
+597
+00:20:21,039 --> 00:20:22,400
+setting that bit the bit of that
+
+598
+00:20:22,400 --> 00:20:24,720
+direction to one but because multiple
+
+599
+00:20:24,720 --> 00:20:26,080
+things could match because we've only
+
+600
+00:20:26,080 --> 00:20:28,080
+got a partial key code we're keeping on
+
+601
+00:20:28,080 --> 00:20:30,240
+scanning until we get to the double zero
+
+602
+00:20:30,240 --> 00:20:32,320
+byte at the end and so that's what we're
+
+603
+00:20:32,320 --> 00:20:34,720
+doing there now when a match is found
+
+604
+00:20:34,720 --> 00:20:36,080
+we're setting the bits effectively
+
+605
+00:20:36,080 --> 00:20:38,000
+setting those to one here
+
+606
+00:20:38,000 --> 00:20:39,840
+and that is the keypress routine now as
+
+607
+00:20:39,840 --> 00:20:41,760
+i say all of that is unfortunately a
+
+608
+00:20:41,760 --> 00:20:43,280
+little bit complicated because of the
+
+609
+00:20:43,280 --> 00:20:46,480
+split cpu layout we've got two cpus and
+
+610
+00:20:46,480 --> 00:20:48,640
+that does mean that um things are a
+
+611
+00:20:48,640 --> 00:20:50,640
+little bit complicated but let's say
+
+612
+00:20:50,640 --> 00:20:52,400
+that's the example today and as i always
+
+613
+00:20:52,400 --> 00:20:53,840
+say you can go to my website download
+
+614
+00:20:53,840 --> 00:20:55,440
+the source code the build scripts and
+
+615
+00:20:55,440 --> 00:20:57,360
+you're welcome to use my example in any
+
+616
+00:20:57,360 --> 00:20:59,600
+way you want them the um
+
+617
+00:20:59,600 --> 00:21:01,600
+parts of the code for the um controlling
+
+618
+00:21:01,600 --> 00:21:03,280
+the sub cpu were written by someone else
+
+619
+00:21:03,280 --> 00:21:04,880
+i found them online so i can't take
+
+620
+00:21:04,880 --> 00:21:06,720
+credit for it all and i had a lot of
+
+621
+00:21:06,720 --> 00:21:08,720
+help with the scanline table information
+
+622
+00:21:08,720 --> 00:21:10,640
+because the original was in russian and
+
+623
+00:21:10,640 --> 00:21:13,200
+so part of that is i got all this the
+
+624
+00:21:13,200 --> 00:21:14,640
+information for free and so you're
+
+625
+00:21:14,640 --> 00:21:16,559
+welcome to use it in the same way in any
+
+626
+00:21:16,559 --> 00:21:18,240
+way you want to have fun with it and
+
+627
+00:21:18,240 --> 00:21:20,000
+have make some make something
+
+628
+00:21:20,000 --> 00:21:21,679
+interesting with it anyway hope you
+
+629
+00:21:21,679 --> 00:21:23,600
+enjoyed what you've seen today thanks
+
+630
+00:21:23,600 --> 00:21:27,120
+for watching and goodbye
+

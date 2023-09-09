@@ -1,0 +1,243 @@
+Hello, it's Keith here and this is lesson one of the simple series of my PDP 11 assembly programming tutorials
+
+We're looking a simple example today and we're going to go over pretty much all of the source code, because a lot of the previous examples I've been doing recently on the PDP-11 UKNC is We've not really covered the entire code and I've said I'll go back to this example and I've covered that before
+
+We're going to go over all of the code give or take today and discuss each of the sections that have been required to make today's example
+And today's example is a smiley face moving around the screen of the UKNC, you can see we've got this little smiley here.
+We can move it around the screen and it cannot go off the screen So we've got some range checking, keyboard reading, and we've got our screen set up.
+
+Now the example today we're using the sub CPU to do the keyboard reading, but we've actually remapped the video memory to the main CPU so that the final code can actually all run from the main CPU.
+The problem with this is it means there's quite a few stages of setup:
+We have to reset the screen memory up, and we have to set up the keyboard reader on the interrupt handler, and so we're going to see how all of that works today.
+
+If you want to know how to create the bitmap graphic, the smiley was edited in AkuSprite editor, my free sprite editor, and if we go to PDP-11 UKNC, we have saved with the two-bit plane option today this one here that is the version we're using, because the graphic is effectively on the final screen of four color graphic:
+as I say the main CPU that can only have two of the bit planes mapped to it.
+The third one is always back mapped to the sub CPU So that is why we're using four color graphic today,
+and we've got some simple range checking to make sure our smiley can't go off the screen
+
+Okay. Well, let's go over to the source code.
+The first thing we're going to do is we're going to discuss the basics of the code that is actually doing the keyboard reading and moving the smiley around and the reason for this is
+Assuming that you don't really care how the background stuff of setting things up works,
+which is going to be easier for you and then we'll go into the details of those rather difficult setup.
+So let's go to the code and let's check it out.
+
+Okay. So here's our program.
+Our program is starting at the beginning of PDP-11 memory.
+Here is our start routine here.
+And the first thing we're doing is we're initializing the screen display with this init routine.
+That is setting up the screen, which is 320 by 240 four colors within the main CPU memory.
+There is a one remaining bit plane on the sub CPU.
+We're then installing our keyboard driver here, which is reading in the keyboard.
+That's an interrupt handler, which will set a 16-bit value with any key presses that occur.
+During this main loop R1 and R2 are the X and Y position of our players smiley.
+
+We have a routine called ShowP which will show the player's a smiley to the screen.
+This is an XOR routine and what this means is if we show the sprite twice to the same position, the second time will invert it and effectively remove it, if it's drawn to the same position twice.
+So Call ShowP will show the player.
+We then have a delay and we're calling ShowP again to the same position, which will remove it.
+
+What we're then doing is we're reading in the value from the keyboard.
+Now the keyboard routine I'm using today is the one we discussed in the platform series last time.
+This has two parts.
+One is it reads in the raw data and the other is it will use in a simulated joystick - decodes the key presses and converts them into an up, down, left, right, fire 1, fire 2, fire 3 and pause sequence.
+And so we can then test those bits for our up, down, left and right and we're doing that with the bit command,
+which is effectively like an AND command that doesn't alter the register.
+
+So that will set the flags according to bits.
+So here we're testing bit 0 That 1 is testing bit 0 here,
+And if Up is not pressed, in other words, if that bit is a 1, then we're skipping over the next section.
+We skip down to here.
+If Up is pressed though we're going to check the X and Y coordinates.
+Now we need to check the Y coordinate in this case and if we're trying to get up the screen, we need to check we're not already at position 0, and if we are we skip over because we're already at the top of the screen, but if we're not we are effectively adding 10 in octal, that's 8 in decimal, of course.
+And so that is moving us one block up the screen.
+
+We're moving in 8 pixel blocks up and down to match the movement speed of left and right Because we're moving in bit plane bytes.
+So that is 8 pixels effectively left and right.
+So that's up, we're then doing the same with down here.
+We're testing bit 1 which has a value of 2, so we're doing a bit of 2 which is effectively an AND of 2, and again we're going to skip over if Down is not pressed, but if it is pressed we're checking for the bottom of the screen here and so we're testing for our 240 lines tall screen here and we are just seeing if we're already at the bottom of the screen, and if we're not we're moving down the screen.
+We're then doing the same for left and right here again, same procedure this time just using the register R1 which is our X position as opposed to R2 which is our Y position, and that is effectively moving our player around the screen while checking the range.
+And we've just got a restart to the infinite loop here, which is just showing the new position of the player.
+We've got a vague root pause routine here, which just decreases R0 until it reaches 0 - very basic there.
+
+The ShowP routine here is the routine that actually shows our sprite to the screen.
+Okay, how do we do this? Well, what we're doing here is we're calculating our VRAM destination here in decimal.
+Our formula is 32768 which is the VRAM base of the screen plus 80 times the Y position.
+Each line is 40 blocks wide, 848 pixel blocks wide, but each of those blocks takes 2 bytes So that's times 80,
+and then our X position times 2 because there were 2 blocks for the 2 bit planes for each X position.
+So that is our calculation in octal.
+It's this and you can see that represented in here.
+Here we're getting the Y position multiplying by octal 120 and that is then having that value there.
+That's a hundred thousand I believe added to it in octal.
+That is the VRAM base.
+That's the start of our screen memory.
+We're then effectively doubling the X position by shifting it to the left by one bit, and then adding that as well.
+So R1 now contains the VRAM destination of the smiley for the position we want to show it to. Okay.
+
+Now we are loading the address of our sprite into R4 and we're loading the height of our sprite into R5 here.
+Now this routine has been based on one that was designed to work with larger sprites and I've kept that functionality in.
+So we've actually got a loop even though our sprite is only one byte wide here.
+So that's why that's doing that unnecessary thing.
+So we're then just backing up the address of the destination for this line into R3.
+We're moving a word out of R4, the source, and we're XORing that with the screen in R3.
+So that is moving the 2 bit planes for one byte block, one 8 pixel block, XORing it with the screen, inverting the screen with that value meaning as I say, if we draw it twice, it will disappear the second time.
+
+Well, we're repeating for any of the horizontal blocks But actually though I'm telling you in this example.
+But as I say if you were using a bigger sprite, you would want a wider value, a higher value there.
+We are then moving down one line adding 18 decimal here moving us down one line and then we are repeating.
+So that is how we are drawing all of the lines of our smiley sprite.
+
+Now, we've got our test keyboard value here.
+This is the value that has been read in from the keyboard interrupt handler.
+The interrupt handler will automatically set that and it's the second byte that we want to read in for the joystick simulation.
+If we wanted raw data, which is a bit harder, we would use the first byte.
+
+Here is our smiley sprite.
+So our sprite is 8 lines So you can see there's 8 lines here and there are 2 bit planes for each line each 8 pixel block is a single byte.
+But then for the 4 colors, there are 2 bytes So basically the first one of these is the first bit plane and you can see that's mostly set because that's for color 1.
+But then if we want color 2 or color 3, we need to set the second bit plane, which you can see is rarely used.
+It's used basically for the smiley and the eyes so you can see that there.
+Okay, so that's our smiley there, so you can create your own with AkuSprite editor.
+If you want to you can create it in raw numeric values.
+And that's the basics of our routine for actually moving our smiley around the screen.
+
+So that's the part you would want to modify if you were making your own game and you didn't want to worry about the screen setup or how to read in the keyboard.
+Well, what if you want to know about that, well, okay, brace yourself because we're going to cover that right now.
+So the fundamentals are this send command routine.
+What we have to do is we have to transfer a command to the sub CPU and execute it on the sub CPU.
+We need to do that if we want to install an interrupt handler, if we want to define a screen layout, things like that.
+Now we have this sequence of data here.
+
+It's a little bit complicated, but this is in a fixed format, which is the correct format for instigating a command on the sub CPU.
+So the sub CPU has its own operating system and we have to give it data in the correct format that it will understand, and that's what we're doing there.
+Now one thing you do need to know about is this flag end byte here.
+It's a 16-bit value.
+So now what this is. This is a value on the main CPU, but the sub CPU can access main CPU memory via a device known as the WRAP device, and so what the sub CPU does is it's doing its little job.
+When it finishes its job, it alters this byte on the main CPUs memory, so the main CPU knows the sub CPU is finished.
+So that we will see in part of this code.
+
+Okay. So at the start of our routine here, we're just going to go over this in a very simple way because it's really too complicated, and it's kind of one of the things if you can't pick it apart yourself, which I would understand, then you probably just want to leave it alone and use it as is.
+So what we're doing here is we are clearing the flag at the start.
+We're then setting up the kind of request we're making and what we're requesting is we're requesting the sub CPU allocators some memory.
+And we're then running this routine called PPUOut.
+Now, PPUOut is the command that actually sends a sequence of data to the sub CPU, because we're actually going to do multiple tasks.
+
+First, we need to actually allocate some memory, then we need to transfer our program.
+Then we need to execute our program, and then we want to in this case release the memory.
+So we're doing all of these. These are all tasks with this PPUOut.
+They just have different kinds of requests and requests will change each time.
+You can see that it's 30, there is 20, and so on and some of the parameters will change accordingly.
+
+Okay. So how do we actually transfer our command?
+Well, what we're doing here is we are transferring the PS parameters.
+We're loading the address into R0, we're loading the number of bytes here, 8 bytes in decimal, and we are transferring one byte from R0, which is the parameters, to the port 176676, which is Channel 2 to the sub CPU.
+We transfer one byte, and then we wait for that byte to be processed by testing 176674, and when that is completed, when the data has been read by the sub CPU, we send the next byte, and we repeat until we're done.
+
+Okay, so the first request is an allocate memory request, and when that comes back the memory that is available to us has been allocated, and we're storing that in R5 for later.
+The next one is that we want to transfer our program from the main CPU to the sub CPU.
+Then, we want to actually execute the program on sub CPU.
+We then wait for the flag end to change, which will change because the last command of our program on the running on the sub CPU will change it, and then we release the memory that was allocated and that is the procedure for all of the examples here of when we're running a program on the sub CPU.
+
+Okay. Now, the first program we're running is the Init routine here and you can see there's some rather huge documentation there on the memory layout of the VRAM, and we're really not going to cover this in detail, it's extremely complicated.
+I'm only going to give a very very brief overview of what we're doing here.
+So we've got an Init routine here, which will set up the screen memory, and the main reason we're doing this is normally the video memory can only be accessed via the wrap device and that's very slow.
+So so that we've got something easier.
+We're reallocating the memory so that it's within the addressable range or from the main CPU.
+
+Okay. So the first thing we're doing here is we are patching in the address for our scanline table.
+The scanline table defines the layout of the screen one line at a time, on the sub CPU.
+This is defined by memory address 272 in octal, and we're actually defining the scanline table at memory address 4000 in octal.
+So we're transferring that memory address to 272 and that defines our custom scanline table will be used.
+We're then loading in the destination VRAM of the first line of our scanline table.
+Though it should be noted the first few lines aren't actually visible on the screen.
+
+Okay. So what we're going to do, is we're going to use some special commands each line of the scanline table can do different tasks: it can define just a line as raw data, but it can also change the memory layout to change the screen resolution, change the colors and things like that.
+So, you can do clever things like have the palette change at different lines of the screen quite complicated, but quite clever.
+We're not going to do that today, though.
+All we're going to do is we're going to first set up the screen to be 320 pixels wide as opposed to 640. We're then going to set our initial colors here.
+
+So we've got these little subroutines that are going to do these kind of jobs, and boy are they complicated?
+Which is why we're not going to go over them in great detail here.
+So basically you can see there's lines here, which are doing the job of actually setting up things here, and so here you can see we're setting this is a line to set up the scale, this is a line to set up the color.
+So if you want to change the palette you would want to change this line.
+If you wanted to change the resolution you'd want to change this line.
+But these are setting up valid data format lines within the scanline table.
+
+So first we're setting the resolution, then we're setting up the palette.
+Then what we're doing here is we're setting up 32 lines Which are actually invisible and we're so we're setting up STABF here.
+And this is to create filler lines and basically all this is doing is creating a sequence of lines all of which point to the same VRAM address because they're not actually going to show any of the screen data.
+It's just filler.
+So we're creating 32 of those in decimal here, and then we're going to create the main body of the screen and the main body of the screen is showing memory address 40000 in octal, 30000 was for the top of the screen.
+But as I say that isn't actually going to change, that's just the black border at the top of the screen.
+So the VRAM for the actual visible screen is 40000 in octal, although it should be noted that this is the memory address for the scanline table.
+The actual memory address that that memory appears in the CPU is different.
+
+So as I say, you will see a different memory address in our calculations for the VRAM destination because of that.
+And we're creating 240 lines of the actual main body of our screen.
+And then finally we're defining an end of the screen and looping back to the start of the screen.
+Now, once we've defined our Screen layout in this case, but anytime we've done a job on the sub CPU, we need to send a complete command back to the main CPU, and we do this via the wrap device.
+This is a device that can write any of the memory, and in this case, we want to tell the main CPUs memory that the job is done.
+Now we select the memory address to write to in with port 177010, and We need to calculate the VRAM address for flag end, but because the main CPUs memory is actually two banks interlaced together alternating bytes, we divide the memory address by two, for the calculated address that the wrap will want to alter that byte.
+And we're then writing the value minus one to those memory bytes.
+And so we write that value to 177014 and that will set flag end to negative in the main CPU memory, telling the main CPU that the job is done, and then the main CPU will release the memory and so on.
+Okay, so that's how we're setting up our VRAM at the start of our program.
+So that's that command there that sets up the screen.
+
+What about the key command?
+Well, we're going to cover this as well.
+We will cover it a little bit quickly, but we'll go into some detail.
+Okay, so we are going to set up our own interrupt handler called KeyHandle.
+Now we're having to calculate this relative to the current running line count, because we don't actually know the memory address this will end up executing from, because it's going to be transferred to allocated memory on the sub-cpu.
+Now the current line number can be got from by using the full stop symbol here, so KeyHandle minus dot is calculating a relative address in the code, and we're then editing that to the program counter when this is running on the sub CPU.
+So that will calculate the correct address for the KeyHandler once this program is finally running on the sub-CPU.
+
+And what we're doing is we're installing that interrupt handler on the sub-CPU by transferring that address to memory address 300, which is the interrupt handler address.
+That means that the KeyHandler interrupt handler will run on the sub-CPU every time a key is pressed.
+We're then setting the flag end and we're actually returning.
+That is actually the end of the program, because all of the rest of the job is going to be done when the interrupt occurs.
+Okay, so when the interrupt occurs, KeyHandle will execute automatically on the sub-CPU.
+We need to back up some registers and we need to back up the wrapper address as well, because the wrapper device is being used by the operating system.
+
+But we're going to use it to store the keys that have been pressed.
+So we are getting the current key that has been pressed by using 177702.
+That's the current key press and then what we're going to do is we're then going to actually process that key press.
+Now the format of the key presses is a little bit odd and slightly annoying, but it is perfectly usable just a little bit annoying.
+So basically, we have a series of key presses depending on the keys we want to read and we're going to read the cursor keys primarily here.
+When a key is pressed down, the top bit will be zero and the other seven bits will be the key code.
+When a key is released, the top bit will be one, the next three bits will be zero and we will get a partial key code in the bottom four bits.
+So we don't get the full key code.
+Now what we're going to do is we're going to test the top bit; if the top bit is one then the minus flag will be set, and so we're going to jump to this KyUP routine here.
+Otherwise, we're going to jump to this key down routine here just after that branch minus, and what this is going to do is it's going to test a key map.
+
+These are the key presses for keys: Up, Down, Left, Right, Space, Enter, Shift and Escape.
+That's the eight key presses that will make up eight bits of the returned byte.
+And so we're simulating a kind of joystick here.
+So if you wanted to change the direction keys or something you would change these key codes here.
+And hopefully you don't need to actually change the routine.
+
+So what the routine is doing here is it's loading in a byte from that lookup table here, and it's repeating until it either finds a key press or is done;
+if the key matches then what is happening is we are clearing the bits that match the second byte of the key code.
+So for example If the key code was 154 then the key up has been pressed, and we would want to clear bit 0 and we would do that by doing a bit clear with the value 1 and so this is assuming that an unpressed key will have a value of 255 and a pressed key will have a value of 0 for its bit.
+And so that's what we're doing here.
+
+So we are just repeatedly looking through skipping over the that mask for the keys that aren't pressed.
+When we find a key that is pressed we're clearing the bits, and we're doing that by transferring to the wrap address, the wrap device second byte address at 177015 and that will set the second byte of the key test value in the main CPU memory.
+And so that is setting those joystick values of simulated joystick values that we were reading before.
+When a key is pressed down, we are comparing to the entire byte read in from that that key map table layer the entire byte, but when a key is up the routine is different:
+
+first we're clearing the top bit of the parameter that we read in because the top bit is denoting the key up itself, and then what we're doing is we're reading in the bytes as before from the lookup table of the key map, but because only four of the bits are actually set by the key up, we're clearing the remaining bits here.
+And we are then comparing to the value that was been read in by the interrupt handler, so that's the key press value and if the value matches, then we are setting the bits effectively setting that bit of that direction to 1.
+But because multiple things could match because we've only got a partial key code, we're keeping on scanning until we get to the double zero byte at the end.
+And so that's what we're doing there.
+Now when a match is found, we're setting the bits effectively setting those to 1 here.
+And that is the key press routine.
+
+Now as I say all of that is unfortunately a little bit complicated because of the split CPU layout - we've got two CPUs and that does mean that some things are a little bit complicated.
+But let's say that's the example today, and as I always say you can go to my website, download the source code, the build scripts, and you're welcome to use my example in any way you want.
+
+The parts of the code for the control and the sub CPU were written by someone else I found them online, so I can't take credit for it all and I had a lot of help with the scanline table information, because the original was in Russian.
+And so a part of that is I got all this the information for free.
+And so you're welcome to use it in the same way in any way you want.
+Have fun with it and have make some make something interesting with it.
+
+Anyway, hope you enjoyed what you've seen today.
+Thanks for watching and goodbye.
