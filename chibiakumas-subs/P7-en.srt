@@ -1,0 +1,1168 @@
+1
+00:00:00,000 --> 00:00:02,320
+hello it's keith here and this is lesson
+
+2
+00:00:02,320 --> 00:00:04,319
+seven of the platform specific series of
+
+3
+00:00:04,319 --> 00:00:06,480
+my pdp-11 assembly programming tutorials
+
+4
+00:00:06,480 --> 00:00:08,800
+we're looking at the uknc again and i've
+
+5
+00:00:08,800 --> 00:00:10,559
+got an oscilloscope above me again which
+
+6
+00:00:10,559 --> 00:00:12,000
+should tell you i'm probably doing
+
+7
+00:00:12,000 --> 00:00:14,320
+something involving sound so we're going
+
+8
+00:00:14,320 --> 00:00:16,560
+to be writing my chibi sound driver on
+
+9
+00:00:16,560 --> 00:00:19,199
+the uknc chibi sound is a very simple
+
+10
+00:00:19,199 --> 00:00:21,119
+sound driver that i write on all of
+
+11
+00:00:21,119 --> 00:00:22,880
+these systems and it allows me to make
+
+12
+00:00:22,880 --> 00:00:24,560
+simple beeps in my games in a sort of
+
+13
+00:00:24,560 --> 00:00:26,080
+similar way in all of the systems which
+
+14
+00:00:26,080 --> 00:00:27,840
+reduces the amount of time it takes me
+
+15
+00:00:27,840 --> 00:00:29,840
+to board games and gives me less of a
+
+16
+00:00:29,840 --> 00:00:30,960
+headache when i'm trying to remember all
+
+17
+00:00:30,960 --> 00:00:32,800
+of the different systems i'm programming
+
+18
+00:00:32,800 --> 00:00:34,960
+so what does chibi sound do well it
+
+19
+00:00:34,960 --> 00:00:37,200
+takes a single byte and typically what
+
+20
+00:00:37,200 --> 00:00:39,040
+it will do is it will use six bits to
+
+21
+00:00:39,040 --> 00:00:41,680
+define a pitch it will take one bit to
+
+22
+00:00:41,680 --> 00:00:43,680
+define whether the noise is on or off
+
+23
+00:00:43,680 --> 00:00:45,440
+and it will take one bit to define the
+
+24
+00:00:45,440 --> 00:00:47,920
+volume level now the uknc is of
+
+25
+00:00:47,920 --> 00:00:49,600
+basically a beeper speaker very much
+
+26
+00:00:49,600 --> 00:00:51,280
+like the spectrum where we have one bit
+
+27
+00:00:51,280 --> 00:00:53,680
+to create a waveform this flips the
+
+28
+00:00:53,680 --> 00:00:55,840
+waveform and by repeatedly changing it
+
+29
+00:00:55,840 --> 00:00:57,920
+we can make high pitch and low pitch
+
+30
+00:00:57,920 --> 00:00:59,600
+sounds and if we change it a bit
+
+31
+00:00:59,600 --> 00:01:01,520
+randomly it'll make distorted sounds
+
+32
+00:01:01,520 --> 00:01:03,520
+however to my knowledge there's no way
+
+33
+00:01:03,520 --> 00:01:05,840
+we can really change the volume so we're
+
+34
+00:01:05,840 --> 00:01:07,360
+not going to be changing the volume in
+
+35
+00:01:07,360 --> 00:01:09,040
+the tv sound driver today so the volume
+
+36
+00:01:09,040 --> 00:01:11,119
+is always going to be loud so that is
+
+37
+00:01:11,119 --> 00:01:13,200
+going to be the limitation today now the
+
+38
+00:01:13,200 --> 00:01:14,799
+code today is very different to the
+
+39
+00:01:14,799 --> 00:01:16,720
+spectrum code though the spectrum
+
+40
+00:01:16,720 --> 00:01:18,479
+version um even though the beeper's
+
+41
+00:01:18,479 --> 00:01:20,560
+function is very similar the spectrum
+
+42
+00:01:20,560 --> 00:01:22,000
+version would make a sound for a short
+
+43
+00:01:22,000 --> 00:01:23,759
+period and then return to the calling
+
+44
+00:01:23,759 --> 00:01:26,880
+routine whereas on the uknc the uk has
+
+45
+00:01:26,880 --> 00:01:29,360
+two processors and it's only the ppu the
+
+46
+00:01:29,360 --> 00:01:31,520
+subprocess the peripheral processor that
+
+47
+00:01:31,520 --> 00:01:34,159
+can actually make a sound so instead of
+
+48
+00:01:34,159 --> 00:01:36,560
+returning after making a short beep what
+
+49
+00:01:36,560 --> 00:01:37,680
+we're going to do is we're going to make
+
+50
+00:01:37,680 --> 00:01:40,000
+a constant beep on that subprocessor
+
+51
+00:01:40,000 --> 00:01:41,759
+this gives us the advantage of constant
+
+52
+00:01:41,759 --> 00:01:44,000
+sound the disadvantage is though
+
+53
+00:01:44,000 --> 00:01:45,840
+if we have that process of making a
+
+54
+00:01:45,840 --> 00:01:47,680
+sound all the time it can't be doing
+
+55
+00:01:47,680 --> 00:01:49,600
+anything else and so that's going to
+
+56
+00:01:49,600 --> 00:01:52,079
+disable the core functionality of the
+
+57
+00:01:52,079 --> 00:01:54,479
+ppu and it's going to stop responding to
+
+58
+00:01:54,479 --> 00:01:56,880
+most of the calls from the main cpu now
+
+59
+00:01:56,880 --> 00:01:58,880
+the exception to that is um i've written
+
+60
+00:01:58,880 --> 00:02:01,280
+a little game called um stop shoot which
+
+61
+00:02:01,280 --> 00:02:03,280
+is a little simple batch shooting game
+
+62
+00:02:03,280 --> 00:02:04,880
+my keyboard driver that we covered in
+
+63
+00:02:04,880 --> 00:02:06,320
+the previous example in the platform
+
+64
+00:02:06,320 --> 00:02:09,119
+series that is interrupt based so that
+
+65
+00:02:09,119 --> 00:02:11,840
+is not affected by the um sound driver
+
+66
+00:02:11,840 --> 00:02:14,319
+but the um the main code
+
+67
+00:02:14,319 --> 00:02:16,480
+that would handle the console simulation
+
+68
+00:02:16,480 --> 00:02:18,560
+i believe is now there's probably a way
+
+69
+00:02:18,560 --> 00:02:20,560
+of creating an interrupt driven sound
+
+70
+00:02:20,560 --> 00:02:22,640
+driver i i haven't written one here it's
+
+71
+00:02:22,640 --> 00:02:24,959
+not that advanced but it will at least
+
+72
+00:02:24,959 --> 00:02:27,840
+work in a basic way so let's first up
+
+73
+00:02:27,840 --> 00:02:30,239
+fire up the example and let's hear it in
+
+74
+00:02:30,239 --> 00:02:34,680
+action not see it in action for a change
+
+75
+00:02:36,400 --> 00:02:38,000
+so here you can hear that we've got a
+
+76
+00:02:38,000 --> 00:02:40,160
+high pitch and it's getting lower as the
+
+77
+00:02:40,160 --> 00:02:41,840
+value goes up i'm not showing it to the
+
+78
+00:02:41,840 --> 00:02:43,519
+screen the value because the console
+
+79
+00:02:43,519 --> 00:02:45,519
+doesn't work
+
+80
+00:02:45,519 --> 00:02:47,280
+and then
+
+81
+00:02:47,280 --> 00:02:50,160
+we will get some distortion sounds here
+
+82
+00:02:50,160 --> 00:02:52,080
+there's some distortion
+
+83
+00:02:52,080 --> 00:02:53,519
+now you'll notice that the waveform's a
+
+84
+00:02:53,519 --> 00:02:54,879
+bit erratic there that's why it's
+
+85
+00:02:54,879 --> 00:02:56,720
+distorted but generally
+
+86
+00:02:56,720 --> 00:02:58,400
+the tighter the waveform the higher the
+
+87
+00:02:58,400 --> 00:03:00,560
+frequency the higher the pitch the
+
+88
+00:03:00,560 --> 00:03:02,640
+larger the distance between the waves
+
+89
+00:03:02,640 --> 00:03:04,000
+the um
+
+90
+00:03:04,000 --> 00:03:05,840
+larger the wavelength the lower the
+
+91
+00:03:05,840 --> 00:03:06,720
+pitch
+
+92
+00:03:06,720 --> 00:03:08,239
+anyway
+
+93
+00:03:08,239 --> 00:03:10,319
+let's go over to the code and let's take
+
+94
+00:03:10,319 --> 00:03:12,640
+a look
+
+95
+00:03:12,640 --> 00:03:15,519
+okay so what is our code doing well
+
+96
+00:03:15,519 --> 00:03:16,640
+first of all let's see what we're
+
+97
+00:03:16,640 --> 00:03:18,400
+actually having to do to get the sound
+
+98
+00:03:18,400 --> 00:03:21,360
+example working now what we're doing is
+
+99
+00:03:21,360 --> 00:03:23,040
+we are basically
+
+100
+00:03:23,040 --> 00:03:24,560
+taking our
+
+101
+00:03:24,560 --> 00:03:26,879
+tv sound driver and we're sending it to
+
+102
+00:03:26,879 --> 00:03:29,599
+the sub cpu and we're executing on the
+
+103
+00:03:29,599 --> 00:03:32,239
+sub cpu but unlike previous examples
+
+104
+00:03:32,239 --> 00:03:34,319
+we're not returning once it completes
+
+105
+00:03:34,319 --> 00:03:36,959
+because it doesn't actually complete it
+
+106
+00:03:36,959 --> 00:03:38,959
+will keep making the sound keep waiting
+
+107
+00:03:38,959 --> 00:03:42,080
+for more data for sounds to make so that
+
+108
+00:03:42,080 --> 00:03:43,760
+is going on forever
+
+109
+00:03:43,760 --> 00:03:45,920
+so once our driver is enabled we're then
+
+110
+00:03:45,920 --> 00:03:48,319
+returning and we're changing this byte c
+
+111
+00:03:48,319 --> 00:03:50,480
+sound a which is the byte parameter that
+
+112
+00:03:50,480 --> 00:03:51,840
+we're passing
+
+113
+00:03:51,840 --> 00:03:53,840
+in the format that chibi sound usually
+
+114
+00:03:53,840 --> 00:03:56,480
+takes so the bottom six bits are the
+
+115
+00:03:56,480 --> 00:03:57,840
+pitch
+
+116
+00:03:57,840 --> 00:03:59,840
+high value is a high pitch a low value
+
+117
+00:03:59,840 --> 00:04:03,040
+is low pitch and then if bit 7 is set
+
+118
+00:04:03,040 --> 00:04:05,120
+then we end up with a noise sound the
+
+119
+00:04:05,120 --> 00:04:06,560
+the volume
+
+120
+00:04:06,560 --> 00:04:08,319
+bit is ignored but the sound off does
+
+121
+00:04:08,319 --> 00:04:09,840
+where it did work so if we send a zero
+
+122
+00:04:09,840 --> 00:04:11,519
+value that will turn off this will
+
+123
+00:04:11,519 --> 00:04:14,400
+silence the sound now the this version
+
+124
+00:04:14,400 --> 00:04:16,880
+of the driver takes a second byte and
+
+125
+00:04:16,880 --> 00:04:19,600
+this is the b byte and if this is
+
+126
+00:04:19,600 --> 00:04:21,519
+non-zero it will actually terminate the
+
+127
+00:04:21,519 --> 00:04:23,840
+running driver the reason for this is as
+
+128
+00:04:23,840 --> 00:04:27,199
+i said that sub cpu is not functioning
+
+129
+00:04:27,199 --> 00:04:29,680
+properly and we are trying to send
+
+130
+00:04:29,680 --> 00:04:32,080
+characters to that term sub cpu to show
+
+131
+00:04:32,080 --> 00:04:33,199
+to the screen
+
+132
+00:04:33,199 --> 00:04:35,040
+but lo and behold nothing is appearing
+
+133
+00:04:35,040 --> 00:04:36,639
+on the screen and that's because the
+
+134
+00:04:36,639 --> 00:04:39,120
+chibi sound driver is in the way and
+
+135
+00:04:39,120 --> 00:04:41,520
+it's stopping anything else running now
+
+136
+00:04:41,520 --> 00:04:44,720
+if we set that b byte to a non-zero
+
+137
+00:04:44,720 --> 00:04:46,960
+value this will actually terminate chibi
+
+138
+00:04:46,960 --> 00:04:48,240
+sound and then this is actually
+
+139
+00:04:48,240 --> 00:04:50,479
+uninstalling the chibi sound sub routine
+
+140
+00:04:50,479 --> 00:04:52,639
+freeing up the memory from the sub cpu
+
+141
+00:04:52,639 --> 00:04:54,400
+so if we run this again
+
+142
+00:04:54,400 --> 00:04:57,840
+we will get
+
+143
+00:04:58,560 --> 00:05:00,880
+a short beep and then those characters
+
+144
+00:05:00,880 --> 00:05:02,479
+are now showing to the screen and they
+
+145
+00:05:02,479 --> 00:05:04,320
+were being sent before but they weren't
+
+146
+00:05:04,320 --> 00:05:06,880
+showing because the sub cpu was still
+
+147
+00:05:06,880 --> 00:05:08,880
+running chibi sound so if we just want a
+
+148
+00:05:08,880 --> 00:05:10,720
+short beat we can execute it and then
+
+149
+00:05:10,720 --> 00:05:13,280
+tell it to return if we want a constant
+
+150
+00:05:13,280 --> 00:05:15,280
+beep though or we need it running on the
+
+151
+00:05:15,280 --> 00:05:17,600
+sub cpu and as i say we're going to have
+
+152
+00:05:17,600 --> 00:05:19,759
+to deal with our graphics functionality
+
+153
+00:05:19,759 --> 00:05:21,600
+and our keyboard reading functionality
+
+154
+00:05:21,600 --> 00:05:23,520
+in some other kind of way because that
+
+155
+00:05:23,520 --> 00:05:26,560
+sub cpu is going to be fully occupied by
+
+156
+00:05:26,560 --> 00:05:29,680
+chibi sound so let's see what chibi
+
+157
+00:05:29,680 --> 00:05:32,000
+sound is actually doing well first of
+
+158
+00:05:32,000 --> 00:05:35,280
+all we've got two bytes on the main cpus
+
+159
+00:05:35,280 --> 00:05:37,840
+memory here that we are using to pass
+
+160
+00:05:37,840 --> 00:05:40,160
+the tubie sound and like before we are
+
+161
+00:05:40,160 --> 00:05:43,199
+calculating the address and we of of
+
+162
+00:05:43,199 --> 00:05:44,800
+those bytes we're dividing by two and
+
+163
+00:05:44,800 --> 00:05:46,800
+then passing it to the wrap port that's
+
+164
+00:05:46,800 --> 00:05:48,560
+how we access memory on the main cpu
+
+165
+00:05:48,560 --> 00:05:50,800
+from the sub cpu so it's the sub cpu
+
+166
+00:05:50,800 --> 00:05:52,960
+running this code now
+
+167
+00:05:52,960 --> 00:05:54,960
+we are going to need in some cases some
+
+168
+00:05:54,960 --> 00:05:57,520
+random data and we don't really have a
+
+169
+00:05:57,520 --> 00:05:59,759
+random source so what we're using is
+
+170
+00:05:59,759 --> 00:06:01,360
+we're using part of the rom cartridge
+
+171
+00:06:01,360 --> 00:06:04,000
+we're using the b triple zero to d
+
+172
+00:06:04,000 --> 00:06:06,080
+triple zero range in hexadecimal and
+
+173
+00:06:06,080 --> 00:06:08,080
+that's fairly random it gives a kind of
+
+174
+00:06:08,080 --> 00:06:09,919
+random distorted sound and so we're
+
+175
+00:06:09,919 --> 00:06:11,840
+loading that address range in r2 and
+
+176
+00:06:11,840 --> 00:06:13,360
+we're going to sequence through that as
+
+177
+00:06:13,360 --> 00:06:16,319
+a random source when we want random data
+
+178
+00:06:16,319 --> 00:06:18,560
+so what we're doing here is we're moving
+
+179
+00:06:18,560 --> 00:06:20,120
+a byte from
+
+180
+00:06:20,120 --> 00:06:23,919
+177014 into r0 that is our parameter
+
+181
+00:06:23,919 --> 00:06:25,759
+from chibi sound which is the pitch and
+
+182
+00:06:25,759 --> 00:06:27,600
+whether the noise is on or off and what
+
+183
+00:06:27,600 --> 00:06:29,360
+we're going to do here is we're going to
+
+184
+00:06:29,360 --> 00:06:31,039
+check the noise bit
+
+185
+00:06:31,039 --> 00:06:33,360
+and we're going to see if the noise is
+
+186
+00:06:33,360 --> 00:06:36,800
+on or not now if the noise is off we're
+
+187
+00:06:36,800 --> 00:06:40,639
+going to set r3 to be with the top bit
+
+188
+00:06:40,639 --> 00:06:41,919
+set to one
+
+189
+00:06:41,919 --> 00:06:44,400
+otherwise we're going to set it to zero
+
+190
+00:06:44,400 --> 00:06:47,199
+why are we doing this well it's the top
+
+191
+00:06:47,199 --> 00:06:50,000
+bit that actually controls the speaker
+
+192
+00:06:50,000 --> 00:06:52,800
+and we need to use port one triple seven
+
+193
+00:06:52,800 --> 00:06:56,160
+one six in octal on the sub cpu not on
+
+194
+00:06:56,160 --> 00:06:58,720
+the main cpu only on the sub cpu and
+
+195
+00:06:58,720 --> 00:07:01,599
+this will toggle the wave so we need to
+
+196
+00:07:01,599 --> 00:07:03,599
+create a wave it'll be a square wave
+
+197
+00:07:03,599 --> 00:07:05,680
+like that and every time we write to
+
+198
+00:07:05,680 --> 00:07:08,479
+that port we are basically toggling from
+
+199
+00:07:08,479 --> 00:07:10,160
+one direction to the other and the speed
+
+200
+00:07:10,160 --> 00:07:11,919
+we toggle will change the pitch and if
+
+201
+00:07:11,919 --> 00:07:13,759
+we change it a bit randomly that will
+
+202
+00:07:13,759 --> 00:07:16,400
+create a distorted sound now
+
+203
+00:07:16,400 --> 00:07:18,720
+if we want a constant tone we always
+
+204
+00:07:18,720 --> 00:07:21,280
+want to toggle with a value of one in
+
+205
+00:07:21,280 --> 00:07:23,520
+that bit which is why if noise is off we
+
+206
+00:07:23,520 --> 00:07:26,080
+are setting the bit seven to one here
+
+207
+00:07:26,080 --> 00:07:28,800
+that's what moving that octal 200 to r3
+
+208
+00:07:28,800 --> 00:07:31,120
+is doing otherwise we want a random
+
+209
+00:07:31,120 --> 00:07:33,039
+value and we are going to get that from
+
+210
+00:07:33,039 --> 00:07:34,479
+r2
+
+211
+00:07:34,479 --> 00:07:37,039
+so what we're doing here
+
+212
+00:07:37,039 --> 00:07:42,160
+is we are loading a value of 200 into r1
+
+213
+00:07:42,160 --> 00:07:43,919
+we're possibly clearing the bit
+
+214
+00:07:43,919 --> 00:07:46,080
+depending on our random data in our two
+
+215
+00:07:46,080 --> 00:07:48,080
+and then we're setting the bit from r3
+
+216
+00:07:48,080 --> 00:07:50,240
+and so basically r one will either
+
+217
+00:07:50,240 --> 00:07:52,400
+contain a top bit of one or zero
+
+218
+00:07:52,400 --> 00:07:54,319
+depending on whether the noise is set
+
+219
+00:07:54,319 --> 00:07:56,960
+and we're xoring that with the port one
+
+220
+00:07:56,960 --> 00:08:00,240
+triple seven one six that is effectively
+
+221
+00:08:00,240 --> 00:08:02,960
+toggling our waveform that xor is doing
+
+222
+00:08:02,960 --> 00:08:05,919
+it but the value in r1 to say it needs
+
+223
+00:08:05,919 --> 00:08:07,919
+to be a constant one in that top bit if
+
+224
+00:08:07,919 --> 00:08:09,759
+we want a constant tone or it needs to
+
+225
+00:08:09,759 --> 00:08:12,400
+alternate if we need a random tone now
+
+226
+00:08:12,400 --> 00:08:14,080
+that's how we're toggling the waveform
+
+227
+00:08:14,080 --> 00:08:15,680
+and how we're handling the noise but we
+
+228
+00:08:15,680 --> 00:08:17,840
+also need to handle the pitch now the
+
+229
+00:08:17,840 --> 00:08:19,440
+way we handle the pitch is simply that
+
+230
+00:08:19,440 --> 00:08:22,000
+we wait a certain period before we flip
+
+231
+00:08:22,000 --> 00:08:24,879
+that bit again and we've got that in r0
+
+232
+00:08:24,879 --> 00:08:27,520
+we've basically loaded in our zero from
+
+233
+00:08:27,520 --> 00:08:29,680
+our parameter byte that was passed to us
+
+234
+00:08:29,680 --> 00:08:32,159
+and we've cleared all but the zero to 63
+
+235
+00:08:32,159 --> 00:08:34,240
+range using this bit clear here and
+
+236
+00:08:34,240 --> 00:08:35,919
+we're just shifting it to the left by
+
+237
+00:08:35,919 --> 00:08:38,080
+three bits to give it the correct range
+
+238
+00:08:38,080 --> 00:08:40,240
+for the kind of pictures that we want
+
+239
+00:08:40,240 --> 00:08:41,120
+now
+
+240
+00:08:41,120 --> 00:08:43,120
+we are just basically waiting here doing
+
+241
+00:08:43,120 --> 00:08:45,200
+nothing not changing anything in the
+
+242
+00:08:45,200 --> 00:08:47,440
+sound hardware and then what we're going
+
+243
+00:08:47,440 --> 00:08:49,200
+to do is basically loop back up and
+
+244
+00:08:49,200 --> 00:08:51,200
+we're going to flip the bit again and
+
+245
+00:08:51,200 --> 00:08:52,720
+that will create our waveform but
+
+246
+00:08:52,720 --> 00:08:54,399
+there's a few other jobs we're going to
+
+247
+00:08:54,399 --> 00:08:56,320
+do first the first one we're going to do
+
+248
+00:08:56,320 --> 00:08:58,080
+is we're going to test the second byte
+
+249
+00:08:58,080 --> 00:08:59,760
+which is the c sound b byte which is
+
+250
+00:08:59,760 --> 00:09:02,160
+used to terminate the command so we're
+
+251
+00:09:02,160 --> 00:09:04,720
+going to check if that is set and if it
+
+252
+00:09:04,720 --> 00:09:07,040
+is set we're going to terminate chibi
+
+253
+00:09:07,040 --> 00:09:09,120
+sound we're going to set the finished
+
+254
+00:09:09,120 --> 00:09:11,680
+flag and this is used by our calling
+
+255
+00:09:11,680 --> 00:09:13,680
+routine to free up the memory and then
+
+256
+00:09:13,680 --> 00:09:15,760
+we're going to return
+
+257
+00:09:15,760 --> 00:09:17,920
+but if the terminate command isn't set
+
+258
+00:09:17,920 --> 00:09:19,680
+then the only thing would left to do is
+
+259
+00:09:19,680 --> 00:09:22,080
+to make sure that the random data source
+
+260
+00:09:22,080 --> 00:09:25,279
+in r2 is not at the end of the wrong
+
+261
+00:09:25,279 --> 00:09:27,760
+range that is a good tone now if we go
+
+262
+00:09:27,760 --> 00:09:28,959
+too high we'll actually end up with the
+
+263
+00:09:28,959 --> 00:09:30,480
+memory map registers and if we start
+
+264
+00:09:30,480 --> 00:09:32,480
+reading from those anything could happen
+
+265
+00:09:32,480 --> 00:09:33,680
+we don't want to do that that could
+
+266
+00:09:33,680 --> 00:09:36,000
+crash things and other ranges will have
+
+267
+00:09:36,000 --> 00:09:38,160
+zeros in them which won't create noise
+
+268
+00:09:38,160 --> 00:09:40,240
+samples that are very good so as i say
+
+269
+00:09:40,240 --> 00:09:43,200
+we're limiting r2 to this fixed range
+
+270
+00:09:43,200 --> 00:09:45,200
+there but basically once we've got to
+
+271
+00:09:45,200 --> 00:09:46,640
+this point we're just jumping straight
+
+272
+00:09:46,640 --> 00:09:48,640
+back to the top and we're repeating the
+
+273
+00:09:48,640 --> 00:09:50,320
+whole procedure testing the chibi sound
+
+274
+00:09:50,320 --> 00:09:52,640
+bytes seeing if it's zero if it is zero
+
+275
+00:09:52,640 --> 00:09:54,320
+we're doing nothing otherwise we're
+
+276
+00:09:54,320 --> 00:09:55,760
+making the sound again and this is
+
+277
+00:09:55,760 --> 00:09:58,399
+creating the tones so there we go so
+
+278
+00:09:58,399 --> 00:10:00,800
+that's how we can create sound on this
+
+279
+00:10:00,800 --> 00:10:03,200
+system it's pretty straightforward so if
+
+280
+00:10:03,200 --> 00:10:04,320
+you've liked what you've seen please
+
+281
+00:10:04,320 --> 00:10:05,920
+like and subscribe because if you like
+
+282
+00:10:05,920 --> 00:10:07,839
+the videos youtube recommends more to be
+
+283
+00:10:07,839 --> 00:10:09,600
+to more people and if you subscribe i
+
+284
+00:10:09,600 --> 00:10:11,760
+get happy and i make more videos so it's
+
+285
+00:10:11,760 --> 00:10:14,079
+good for everyone anyway as i say go to
+
+286
+00:10:14,079 --> 00:10:15,600
+the website download the source code and
+
+287
+00:10:15,600 --> 00:10:17,519
+build scripts for today's example and
+
+288
+00:10:17,519 --> 00:10:18,959
+you can have a go with it and maybe have
+
+289
+00:10:18,959 --> 00:10:20,640
+some fun with it and use it in any way
+
+290
+00:10:20,640 --> 00:10:22,720
+you can benefit from anyway i hope
+
+291
+00:10:22,720 --> 00:10:24,560
+you've enjoyed what you've seen today
+
+292
+00:10:24,560 --> 00:10:28,720
+thanks for watching and goodbye
+

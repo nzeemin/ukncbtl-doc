@@ -1,0 +1,122 @@
+
+Hello, it's Keith here and this is lesson 7 of the platform specific series of my PDP-11 assembly programming tutorials
+
+We're looking at the UKNC again, and I've got an oscilloscope above me again, which should tell you I'm probably doing something involving sound.
+
+So we're going to be writing my Chibi sound driver on the UKNC.
+Chibi sound is a very simple sound driver, that I write on all of these systems and it allows me to make simple beeps in my games in a sort of similar way And all of the systems, which reduces the amount of time it takes me to port games And gives me less of a headache when I'm trying to remember all of the different systems I'm programming.
+
+So what does Chibi sound do? Well, it takes a single byte and typically what it will do is it will use six bits to define a pitch.
+It will take one bit to define whether the noise is on or off and it will take one bit to define the volume level.
+
+Now the UKNC is a basically a beeper speaker very much like the Spectrum where we have one bit to create a waveform.
+This flips the waveform and by repeatedly changing it we can make high pitch and low pitch sounds, and if we were to change it a bit randomly, it'll make distorted sounds.
+
+However to my knowledge, there's no way we can really change the volume.
+So we're not going to be changing the volume in the Chibi sound driver today.
+So the volume is always going to be loud.
+So that is going to be the limitation today.
+
+Now the code today is very different to the Spectrum code though.
+The spectrum version, even though the beeper function is very similar, the spectrum version would make a sound for a short period and then return to the calling routine, whereas on the UKNC, the UKNC has two processors and it's only the PPU, the sub processor, the peripheral processor that can actually make a sound.
+So instead of returning after making a short beep, what we're going to do is going to make a constant beep on that sub-processor.
+This gives us the advantage of constant sound.
+
+The disadvantage is though, if we have that sub-processor making a sound all the time, it can't be doing anything else, and so that's going to disable the core functionality of the PPU and it's going to stop responding to most of the calls from the main CPU.
+
+Now the exception to that is I've written a little game called Suck Shoot, which is a little simple bat shooting game.
+My keyboard driver that we covered in the previous example in the platform series that is interrupt based.
+So that is not affected by the sound driver.
+But the the main code that would handle a console simulation I believe is.
+
+Now, there's probably a way of creating an interrupt driven sound driver.
+I haven't written one here. It's not that advanced, but it will at least work in a basic way.
+
+So let's first up file up the example and let's hear it in action.
+Let's see it in action for a change.
+
+So here you can hear that we've got a high pitch and it's getting lower as the value goes up I'm not showing it to the screen the value because the console doesn't work.
+And then we will get some distortion sounds.
+
+Now you'll notice that the waveforms a bit erratic there.
+That's why it's distorted but generally the tighter the waveform, the higher the frequency, the higher the pitch;
+the larger the distance between the waves, the larger the wavelength, the lower the pitch.
+
+Anyway, let's go over to the code and let's take a look.
+Okay. So what is our code doing?
+Well, first of all, let's see what we're actually having to do to get the sound example working.
+
+Now what we're doing is we are basically taking a Chibi sound driver and we're sending it to the sub-CPU and we're executing on the sub-CPU, but unlike previous examples, we're not returning once it completes, because it doesn't actually complete.
+It will keep making the sound, it keep waiting for more data for sounds to make.
+So that is going on forever.
+
+So once our driver is enabled, we're then returning and we're changing this byte CsndA, which is the byte parameter that we're passing in the format that Chibi sound usually takes.
+So the bottom six bits are the pitch high value is a high pitch, a low value is low pitch, and then if bit 7 is set, then we end up with a noise sound.
+The volume bit is ignored, but the sound off does what it did work.
+So if we send a zero value that will turn off this will silence the sound.
+
+Now The this version of the driver takes a second byte and this is the B byte and if this is non zero, it will actually terminate the running driver.
+The reason for this is as I said that sub-CPU is not functioning properly, and we are trying to send characters to that sub-CPU to show to the screen.
+
+But lo and behold nothing is appearing on the screen, and that's because the Chibi sound driver is in the way, and it's stopping anything else running.
+Now if we set that B byte to a non-zero value, this will actually terminate Chibi sound, and then this is actually uninstalling the Chibi sound subroutine, freeing up the memory from the sub-CPU.
+
+So if we run this again, we will get
+...
+a short beep and then those characters are now showing to the screen, and they were being sent before but they weren't showing, because the sub-CPU was still running Chibi sound.
+So if we just want a short beep we can execute it and then tell it to return.
+
+If we want a constant beep though, we need it running on the sub-CPU and as I say, we're gonna have to deal with our graphics functionality and our keyboard reading functionality in some other kind of way, because that sub-CPU is going to be fully occupied by Chibi sound.
+
+So, let's see what Chibi sound is actually doing.
+Well, first of all we've got two bytes on the main CPUs memory here that we are using to pass to Chibi sound, and like before we are calculating the address and we of those bytes we're dividing by two and then passing it to the WRAP port.
+That's how we access memory on the main CPU from the sub-CPU.
+So it's the sub-CPU running this code.
+
+Now. We are going to need in some cases some random data, and we don't really have a random source.
+So what we're using is we're using part of the ROM cartridge we're using the B000 to D000 range in hexadecimal and that's fairly random.
+It gives a kind of random distorted sound and so we're loading that address range in R2.
+We're going to sequence through that as a random source when we want random data.
+
+So what we're doing here is we're moving a byte from 177014 into R0.
+That is our parameter from Chibi sound which is the pitch and whether the noise is on or off and what we're going to do here is we're going to check the noise bit, and we're going to see if the noise is on or not.
+Now if the noise is off We're going to set R3 to be with the top bit set to 1.
+Otherwise we're going to set it to 0.
+
+Why are we doing this? well It's the top bit that actually controls the speaker, and we need to use port 177716 in octal on the sub-CPU, not on the main CPU, only on the sub-CPU, and this will toggle the wave.
+So we need to create a wave, It'll be a square wave like that, and every time we write to that port, we are basically toggling from one direction to the other, and the speed we toggle will change the pitch, and if we change it a bit randomly that will create a distorted sound.
+
+Now if we want a constant tone, we always want to toggle with a value of 1 in that bit Which is why if noise is off we are setting the bit 7 to 1 here.
+That's what moving that octal 200 to R3 is doing.
+Otherwise, we want a random value and we are going to get that from R2.
+So what we're doing here is we are loading a value of 200 into R1, we're possibly clearing the bit depending on our random data in R2, and then we're setting the bit from R3, and so basically R1 will either contain a top bit of 1 or 0, depending on whether the noise is set and we're XOR-ing that with the port 177716 that is effectively toggling our waveform that XORs doing it, but the value in R1 to say it needs to be a constant 1 in that top bit if we want a constant tone, or it needs to alternate if we need a random tone.
+
+Now that's how we're toggling the waveform and how we're handling the noise, but we also need to handle the pitch.
+Now the way we handle the pitch is simply that we wait a certain period before we flip that bit again, and we've got that in R0.
+We've basically loaded in R0 from our parameter byte that was passed to us and we've cleared all but the 0 to 63 range using this bit clear here and we're just shifting it to the left by three bits to give it the correct range for the kind Of pitches that we want.
+
+Now, we are just basically waiting here doing nothing, not changing anything in the sound hardware, and then what we're going to do is basically loop back up and we're going to flip the bit again.
+And that will create our waveform, but there's a few other jobs we're going to do first.
+
+The first one we're going to do is we're going to test the second byte, which is the CsndB byte, which is used to terminate the command.
+So we're going to check, if that is set and if it is set, we're going to terminate ChibiSound.
+We're going to set the finished flag, and this is used by our calling routine to free up the memory, and then we're going to return.
+But if the terminate command isn't set, then the only thing we'd left to do is to make sure, that the random data source in R2 is not at the end of the ROM range that is a good tone.
+
+Now if we go too high, we'll actually end up with the memory map registers.
+And if we start reading from those, anything could happen.
+We don't want to do that.
+That could crash things, and other ranges will have zeros in them which won't create noise samples that are very good.
+So as I say, we're limiting R2 to this fixed range there, but basically once we've got to this point, we're just jumping straight back to the top and we're repeating the whole procedure testing the ChibiSound byte seeing if it's zero.
+If it is zero, we're doing nothing.
+Otherwise, we're making the sound again.
+And this is creating the tones.
+
+So there we go.
+So that's how we can create sound on this system.
+It's pretty straightforward, so if you've liked what you've seen please like and subscribe, because if you like the videos YouTube recommends more to be to more people, and if you subscribe I get happy, and I make more videos.
+So it's good for everyone.
+
+Anyway, as I say, go to the website download the source code and build script for today's example, and you can have a go with it and maybe have some fun with it and use it in any way you can benefit from.
+Anyway, I hope you've enjoyed what you've seen today.
+Thanks for watching and goodbye.
